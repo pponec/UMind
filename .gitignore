@@ -25,3 +25,7 @@ replay_pid*
 
 # Claude Code local settings
 .claude/
+
+# Python bytecode cache
+__pycache__/
+*.pyc

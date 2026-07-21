@@ -65,9 +65,13 @@ let currentOffset = 0;        // caret offset to restore after a re-render
 let textBurst = false;
 let textBurstTimer = null;
 
+// Set true once the initial load+render is done, so auto-save doesn't fire
+// while restoring state at startup.
+let booted = false;
+
 const outlineEl = document.getElementById('outline');
 const statusEl = document.getElementById('status');
-const jsonEl = document.getElementById('json');
+const fileInput = document.getElementById('file-input');
 
 /* ---------------------------------------------------------------------- */
 /* Text sanitising (assignment §5)                                        */
@@ -172,6 +176,7 @@ function render() {
   outlineEl.replaceChildren(rootUl);
   restoreFocus();
   updateDetail();
+  if (booted) scheduleSave(); // every structural change persists
 }
 
 /** Focus the node identified by `currentId` and place the caret. */
@@ -400,7 +405,7 @@ outlineEl.addEventListener('input', (e) => {
   currentId = id;
   // Keep the detail panel's heading in sync while the title is edited.
   detailTitleEl.textContent = readNodeText(el).trim();
-  markUnsaved();
+  scheduleSave();
 });
 
 // Track the focused node so operations always act on the real caret target.
@@ -482,7 +487,6 @@ noteDialog.addEventListener('close', () => {
         endTextBurst();
         snapshot();
         node.note = next;
-        markUnsaved();
       }
     }
     currentId = id;
@@ -609,7 +613,17 @@ function updateDetail() {
 }
 
 /* ---------------------------------------------------------------------- */
-/* JSON export / import (Phase 0 stand-in for the server)                 */
+/* Persistence (Phase 0 stand-in for the server)                          */
+/*                                                                        */
+/* Two layers:                                                            */
+/*   1. Auto-save to localStorage (debounced) so state survives a restart */
+/*      with zero user effort. Reliable when served over http(s) or       */
+/*      localhost; under file:// the origin is opaque and it may not      */
+/*      persist, hence the file layer below.                              */
+/*   2. Explicit Open/Save of a real umind.json file for backup and for   */
+/*      moving a map between machines. Uses the File System Access API on  */
+/*      Chromium; elsewhere (and under file://) it falls back to a         */
+/*      download and a file picker.                                        */
 /* ---------------------------------------------------------------------- */
 
 /** Serialise the document, trimming node text (§5: trim on serialisation). */
@@ -628,27 +642,142 @@ function serialise() {
   );
 }
 
-function exportJson() {
-  jsonEl.value = serialise();
-  setStatus('exported');
-}
-
-function importJson() {
+/** Replace the current document from a JSON string (file or storage). */
+function loadDocFromText(text, source) {
   try {
-    const parsed = JSON.parse(jsonEl.value);
+    const parsed = JSON.parse(text);
     if (!parsed.root || !parsed.rootId) throw new Error('missing root');
     endTextBurst();
     snapshot();
     doc = parsed;
     currentId = doc.rootId;
     currentOffset = 0;
-    render();
-    setStatus('imported');
+    render(); // also schedules a localStorage save
+    setStatus('opened' + (source ? ' ' + source : ''));
+    return true;
   } catch (err) {
-    setStatus('invalid JSON');
-    console.warn('Import failed:', err);
+    setStatus('invalid file');
+    console.warn('Open failed:', err);
+    return false;
   }
 }
+
+/* ---- localStorage auto-save ---- */
+
+const STORAGE_KEY = 'umind:doc';
+let storageOk = false;
+let saveTimer = null;
+
+/** Detect whether localStorage is usable (may be blocked under file://). */
+function storageAvailable() {
+  try {
+    const k = '__umind_test__';
+    localStorage.setItem(k, '1');
+    localStorage.removeItem(k);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/** Debounced auto-save of the whole document to localStorage. */
+function scheduleSave() {
+  if (!storageOk) return;
+  setStatus('editing…');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, serialise());
+      setStatus('saved');
+    } catch (e) {
+      setStatus('save failed');
+      console.warn('localStorage save failed:', e);
+    }
+  }, 500);
+}
+
+/** Read the stored document, or null when absent/invalid. */
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.root && parsed.rootId) return parsed;
+  } catch (e) {
+    console.warn('localStorage load failed:', e);
+  }
+  return null;
+}
+
+/* ---- Real-file Open/Save ---- */
+
+const canFsAccess = 'showSaveFilePicker' in window; // secure context only
+let fileHandle = null; // reused so repeated saves overwrite the same file
+
+/** Save the document to a real umind.json file (or download as fallback). */
+async function saveFile() {
+  const json = serialise();
+  if (canFsAccess) {
+    try {
+      if (!fileHandle) {
+        fileHandle = await window.showSaveFilePicker({
+          suggestedName: 'umind.json',
+          types: [{ description: 'UMind map', accept: { 'application/json': ['.json'] } }],
+        });
+      }
+      const writable = await fileHandle.createWritable();
+      await writable.write(json);
+      await writable.close();
+      setStatus('saved to file');
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return; // user cancelled the picker
+      console.warn('File save failed, falling back to download:', e);
+    }
+  }
+  downloadJson(json);
+  setStatus('downloaded');
+}
+
+/** Fallback save: trigger a browser download (works under file:// too). */
+function downloadJson(json) {
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'umind.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Open a umind.json file, replacing the current document. */
+async function openFile() {
+  if (canFsAccess) {
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [{ description: 'UMind map', accept: { 'application/json': ['.json'] } }],
+      });
+      fileHandle = handle; // subsequent Save overwrites this file
+      const file = await handle.getFile();
+      loadDocFromText(await file.text(), 'from file');
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      console.warn('File open failed, falling back to picker:', e);
+    }
+  }
+  fileInput.click(); // fallback: hidden <input type="file">
+}
+
+// Fallback file-input change handler.
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => loadDocFromText(String(reader.result), 'from file');
+  reader.readAsText(file);
+  fileInput.value = ''; // allow re-opening the same file later
+});
 
 /* ---------------------------------------------------------------------- */
 /* Status line                                                            */
@@ -657,9 +786,6 @@ function importJson() {
 function setStatus(text) {
   statusEl.textContent = text;
 }
-function markUnsaved() {
-  setStatus('edited');
-}
 
 /* ---------------------------------------------------------------------- */
 /* Wire up the toolbar and boot                                           */
@@ -667,10 +793,25 @@ function markUnsaved() {
 
 document.getElementById('btn-undo').addEventListener('click', undo);
 document.getElementById('btn-redo').addEventListener('click', redo);
-document.getElementById('btn-export').addEventListener('click', exportJson);
-document.getElementById('btn-import').addEventListener('click', importJson);
+document.getElementById('btn-open').addEventListener('click', openFile);
+document.getElementById('btn-save').addEventListener('click', saveFile);
 document
   .getElementById('detail-edit')
   .addEventListener('click', () => openNoteDialog(currentId));
 
+// Boot: restore the last document from localStorage (if any), then render.
+storageOk = storageAvailable();
+const restored = storageOk ? loadFromStorage() : null;
+if (restored) {
+  doc = restored;
+  currentId = doc.rootId;
+}
 render();
+booted = true;
+if (!storageOk) {
+  setStatus('autosave off');
+  statusEl.title = 'localStorage is unavailable (e.g. opened via file://). ' +
+    'Use Save to keep a umind.json file, or serve over http for autosave.';
+} else {
+  setStatus(restored ? 'loaded' : 'saved');
+}

@@ -12,8 +12,11 @@
     <button id="btn-undo" title="Ctrl+Z">Undo</button>
     <button id="btn-redo" title="Ctrl+Shift+Z">Redo</button>
     <span class="spacer"></span>
-    <button id="btn-open" title="Open a umind.json file">Open…</button>
-    <button id="btn-save" title="Save a umind.json file (backup / transfer)">Save</button>
+    <button id="btn-new" title="Start a new document">New</button>
+    <button id="btn-open" title="Open a project file">Open…</button>
+    <button id="btn-save" title="Save to the current file">Save</button>
+    <button id="btn-saveas" title="Save to a new file (named after the title)">Save As…</button>
+    <span id="file-name" class="file-name" title="Current project file">(unsaved)</span>
     <span id="status" class="status" title="Auto-saved to your browser">saved</span>
   </header>
 
@@ -43,8 +46,21 @@
     <span><kbd>Alt</kbd>+<kbd>Enter</kbd> description</span>
     <span><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> undo/redo</span>
     <span>drag <span aria-hidden="true">⠿</span> to move</span>
-    <span class="persist-note">Auto-saved in this browser · <strong>Save</strong>/<strong>Open</strong> a <code>umind.json</code> file for backup or transfer</span>
+    <span class="persist-note">Each project is a <code>.json</code> file (the title names it) · auto-saved in this browser between sessions · <strong>New</strong>/<strong>Open</strong>/<strong>Save</strong>/<strong>Save&nbsp;As</strong> manage the file</span>
   </footer>
+
+  <dialog id="name-dialog" class="note-dialog">
+    <form method="dialog">
+      <h2 class="note-heading">Save project as</h2>
+      <input id="name-input" class="name-input" type="text" spellcheck="false"
+        autocomplete="off" placeholder="filename.json">
+      <menu class="note-actions">
+        <span class="note-hint">The file name is the project's key</span>
+        <button type="button" id="name-cancel" class="secondary">Cancel</button>
+        <button value="ok" class="primary">Save</button>
+      </menu>
+    </form>
+  </dialog>
 
   <dialog id="note-dialog" class="note-dialog">
     <form method="dialog">

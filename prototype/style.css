@@ -52,6 +52,16 @@ body {
 .brand { color: var(--accent); letter-spacing: 0.3px; }
 .spacer { flex: 1; }
 .status { color: var(--muted); font-size: 13px; min-width: 60px; }
+.file-name {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--fg);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-name.unbound { color: var(--muted); font-style: italic; }
 
 button {
   font: inherit;
@@ -321,6 +331,16 @@ li:hover > .row > .drag-grip { opacity: 0.6; }
 .note-heading { margin: 0; font-size: 1.1em; }
 .note-subject { margin: 0; color: var(--muted); font-size: 13px; }
 .note-subject span { color: var(--fg); font-weight: 600; }
+.name-input {
+  width: 100%;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  padding: 8px 10px;
+}
 #note-text {
   width: 100%;
   min-height: 160px;

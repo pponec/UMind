@@ -24,11 +24,20 @@ function makeNode(text) {
   return { id: genId(), text: text || '', note: '', collapsed: false, children: [] };
 }
 
-/** Build the initial empty document (a single central-topic root). */
+/** Build the initial empty document. `id` is a stable, hidden project id
+ *  (unused in Phase 0 — the file is the identity — but carried in the JSON
+ *  so Phase 1 can address the map as /api/map/{id}). The root text doubles
+ *  as the human project name and the suggested file name. */
 function newDocument() {
-  const root = makeNode('Central topic');
+  const root = makeNode('Untitled');
   root.id = 'n_root';
-  return { version: 1, rootId: root.id, root: root };
+  return { version: 1, id: 'm_' + Math.random().toString(36).slice(2, 10), rootId: root.id, root: root };
+}
+
+/** Ensure a loaded document has a project id (older files may lack one). */
+function ensureDocId(d) {
+  if (d && !d.id) d.id = 'm_' + Math.random().toString(36).slice(2, 10);
+  return d;
 }
 
 /** Deep clone a plain-data value (used for undo snapshots). */
@@ -77,6 +86,7 @@ const DND_ENABLED = true;
 const outlineEl = document.getElementById('outline');
 const statusEl = document.getElementById('status');
 const fileInput = document.getElementById('file-input');
+const fileNameEl = document.getElementById('file-name');
 
 /* ---------------------------------------------------------------------- */
 /* Text sanitising (assignment §5)                                        */
@@ -702,7 +712,7 @@ function serialise() {
     children: node.children.map(trimTree),
   });
   return JSON.stringify(
-    { version: doc.version, rootId: doc.rootId, root: trimTree(doc.root) },
+    { version: doc.version, id: doc.id, rootId: doc.rootId, root: trimTree(doc.root) },
     null,
     2,
   );
@@ -714,11 +724,13 @@ function loadDocFromText(text, source) {
     const parsed = JSON.parse(text);
     if (!parsed.root || !parsed.rootId) throw new Error('missing root');
     endTextBurst();
-    snapshot();
-    doc = parsed;
+    doc = ensureDocId(parsed);
+    undoStack.length = 0; // history belongs to the previous document
+    redoStack.length = 0;
     currentId = doc.rootId;
     currentOffset = 0;
     render(); // also schedules a localStorage save
+    updateFileLabel();
     setStatus('opened' + (source ? ' ' + source : ''));
     return true;
   } catch (err) {
@@ -730,7 +742,12 @@ function loadDocFromText(text, source) {
 
 /* ---- localStorage auto-save ---- */
 
-const STORAGE_KEY = 'umind:doc';
+// The file name is the unique project key. Each named project auto-saves under
+// its own key; an unnamed (New) document uses the scratch key. LAST_KEY records
+// which project to restore on the next visit.
+const SCRATCH_KEY = 'umind:doc';
+const PROJECT_PREFIX = 'umind:file:';
+const LAST_KEY = 'umind:last';
 let storageOk = false;
 let saveTimer = null;
 
@@ -746,26 +763,37 @@ function storageAvailable() {
   }
 }
 
-/** Debounced auto-save of the whole document to localStorage. */
+/** localStorage key for the active project (its file name, or the scratch key). */
+function activeStorageKey() {
+  return currentFileName ? PROJECT_PREFIX + currentFileName : SCRATCH_KEY;
+}
+
+/** Persist the document to its project key immediately (used by Save). */
+function persistProject() {
+  if (!storageOk) return;
+  try {
+    localStorage.setItem(activeStorageKey(), serialise());
+    localStorage.setItem(LAST_KEY, currentFileName || '');
+  } catch (e) {
+    console.warn('localStorage save failed:', e);
+  }
+}
+
+/** Debounced auto-save of the whole document to its project key. */
 function scheduleSave() {
   if (!storageOk) return;
   setStatus('editing…');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, serialise());
-      setStatus('saved');
-    } catch (e) {
-      setStatus('save failed');
-      console.warn('localStorage save failed:', e);
-    }
+    persistProject();
+    setStatus('saved');
   }, 500);
 }
 
-/** Read the stored document, or null when absent/invalid. */
-function loadFromStorage() {
+/** Read a stored document by localStorage key, or null when absent/invalid. */
+function readStoredDoc(key) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (parsed && parsed.root && parsed.rootId) return parsed;
@@ -775,55 +803,154 @@ function loadFromStorage() {
   return null;
 }
 
-/* ---- Real-file Open/Save ---- */
+/* ---- Projects: New / Open / Save / Save As ----
+   The FILE NAME is the unique project key (currentFileName). New starts a
+   fresh unnamed project; Save As asks for a name (the OS dialog on Chromium,
+   otherwise a prompt) and binds it; Save writes back to that name; if there is
+   no name yet, Save falls through to Save As. When the File System Access API
+   is available the real .json file is written directly; otherwise the project
+   lives in localStorage under its name and Save As also downloads the file. */
 
 const canFsAccess = 'showSaveFilePicker' in window; // secure context only
-let fileHandle = null; // reused so repeated saves overwrite the same file
+let fileHandle = null; // real-file handle when available (null in fallback)
+let currentFileName = null; // the project's file name = its unique key
 
-/** Save the document to a real umind.json file (or download as fallback). */
+const FILE_TYPES = [
+  { description: 'UMind map', accept: { 'application/json': ['.json'] } },
+];
+
+/** ASCII slug of the project title, used as the default file name. */
+function slugify(s) {
+  const base = (s || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritics
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return base || 'untitled';
+}
+
+function suggestedFileName() {
+  return currentFileName || slugify(doc.root.text) + '.json';
+}
+
+/** Show the current project's file name (or that it is not named yet). */
+function updateFileLabel() {
+  if (!fileNameEl) return;
+  fileNameEl.textContent = currentFileName || '(unsaved)';
+  fileNameEl.classList.toggle('unbound', !currentFileName);
+  fileNameEl.title = !currentFileName
+    ? 'Not saved yet — use Save As'
+    : fileHandle
+      ? 'Written to the file ' + currentFileName + ' on disk'
+      : currentFileName +
+        ' — stored in this browser. For a real file on disk, run locally in ' +
+        'Chrome (python3 run.py) and use Save As.';
+}
+
+async function writeHandle(handle, json) {
+  const writable = await handle.createWritable();
+  await writable.write(json);
+  await writable.close();
+}
+
+/* In-app name prompt (window.prompt is blocked in sandboxed iframes such as
+   the published artifact). Resolves to the entered name, or null if cancelled. */
+const nameDialog = document.getElementById('name-dialog');
+const nameInput = document.getElementById('name-input');
+document
+  .getElementById('name-cancel')
+  .addEventListener('click', () => nameDialog.close('cancel'));
+
+function askName(def) {
+  return new Promise((resolve) => {
+    nameInput.value = def || '';
+    const onClose = () => {
+      nameDialog.removeEventListener('close', onClose);
+      resolve(nameDialog.returnValue === 'ok' ? nameInput.value : null);
+    };
+    nameDialog.addEventListener('close', onClose);
+    nameDialog.showModal();
+    nameInput.focus();
+    nameInput.select();
+  });
+}
+
+/** Save to the current project file; if unnamed, behave like Save As. */
 async function saveFile() {
-  const json = serialise();
-  if (canFsAccess) {
+  if (!currentFileName) return saveFileAs();
+  persistProject(); // keep the in-browser copy current
+  if (canFsAccess && fileHandle) {
     try {
-      if (!fileHandle) {
-        fileHandle = await window.showSaveFilePicker({
-          suggestedName: 'umind.json',
-          types: [{ description: 'UMind map', accept: { 'application/json': ['.json'] } }],
-        });
-      }
-      const writable = await fileHandle.createWritable();
-      await writable.write(json);
-      await writable.close();
+      await writeHandle(fileHandle, serialise());
       setStatus('saved to file');
       return;
     } catch (e) {
-      if (e.name === 'AbortError') return; // user cancelled the picker
-      console.warn('File save failed, falling back to download:', e);
+      console.warn('File save failed:', e);
     }
   }
-  downloadJson(json);
-  setStatus('downloaded');
+  setStatus('saved in browser'); // no disk access here (e.g. sandbox/no FS API)
+}
+
+/** Save As: name the project (its unique key) and write it out. */
+async function saveFileAs() {
+  const json = serialise();
+  let name = null;
+  let handle = null;
+
+  if (canFsAccess) {
+    try {
+      handle = await window.showSaveFilePicker({
+        suggestedName: suggestedFileName(),
+        types: FILE_TYPES,
+      });
+      name = handle.name;
+    } catch (e) {
+      if (e.name === 'AbortError') return; // user cancelled
+      console.warn('Save As picker failed, falling back to prompt:', e);
+    }
+  }
+  if (!name) {
+    // In-app name dialog (window.prompt is blocked in sandboxed iframes).
+    const entered = await askName(suggestedFileName());
+    if (entered === null) return; // cancelled
+    name = entered.trim();
+    if (!name) return;
+    if (!/\.json$/i.test(name)) name += '.json';
+  }
+
+  currentFileName = name;
+  fileHandle = handle; // may be null (fallback)
+  persistProject();
+  updateFileLabel();
+  if (handle) {
+    await writeHandle(handle, json);
+    setStatus('saved to file');
+  } else {
+    downloadJson(json, name); // real file in a normal browser; no-op in sandbox
+    setStatus('saved in browser');
+  }
 }
 
 /** Fallback save: trigger a browser download (works under file:// too). */
-function downloadJson(json) {
+function downloadJson(json, name) {
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'umind.json';
+  a.download = name || 'untitled.json';
   a.click();
   URL.revokeObjectURL(url);
 }
 
-/** Open a umind.json file, replacing the current document. */
+/** Open a file, switching to it as the current project. */
 async function openFile() {
   if (canFsAccess) {
     try {
-      const [handle] = await window.showOpenFilePicker({
-        types: [{ description: 'UMind map', accept: { 'application/json': ['.json'] } }],
-      });
-      fileHandle = handle; // subsequent Save overwrites this file
+      const [handle] = await window.showOpenFilePicker({ types: FILE_TYPES });
+      fileHandle = handle;
+      currentFileName = handle.name; // the file name becomes the project key
       const file = await handle.getFile();
       loadDocFromText(await file.text(), 'from file');
       return;
@@ -835,10 +962,28 @@ async function openFile() {
   fileInput.click(); // fallback: hidden <input type="file">
 }
 
-// Fallback file-input change handler.
+/** New: start a fresh, unnamed project. The current project is already kept
+ *  in localStorage under its own key, so nothing saved is lost. */
+function newFile() {
+  endTextBurst();
+  doc = newDocument();
+  fileHandle = null;
+  currentFileName = null; // unnamed until Save As
+  undoStack.length = 0;
+  redoStack.length = 0;
+  currentId = doc.rootId;
+  currentOffset = 0;
+  render();
+  updateFileLabel();
+  setStatus('new project');
+}
+
+// Fallback file-input change handler (no File System Access API).
 fileInput.addEventListener('change', () => {
   const file = fileInput.files && fileInput.files[0];
   if (!file) return;
+  fileHandle = null; // fallback mode can't keep a writable handle
+  currentFileName = file.name;
   const reader = new FileReader();
   reader.onload = () => loadDocFromText(String(reader.result), 'from file');
   reader.readAsText(file);
@@ -975,25 +1120,32 @@ if (DND_ENABLED) {
 
 document.getElementById('btn-undo').addEventListener('click', undo);
 document.getElementById('btn-redo').addEventListener('click', redo);
+document.getElementById('btn-new').addEventListener('click', newFile);
 document.getElementById('btn-open').addEventListener('click', openFile);
 document.getElementById('btn-save').addEventListener('click', saveFile);
+document.getElementById('btn-saveas').addEventListener('click', saveFileAs);
 document
   .getElementById('detail-edit')
   .addEventListener('click', () => openNoteDialog(currentId));
 
-// Boot: restore the last document from localStorage (if any), then render.
+// Boot: restore the last-open project from localStorage (if any), then render.
 storageOk = storageAvailable();
-const restored = storageOk ? loadFromStorage() : null;
-if (restored) {
-  doc = restored;
-  currentId = doc.rootId;
+if (storageOk) {
+  const lastName = localStorage.getItem(LAST_KEY) || '';
+  const restored = readStoredDoc(lastName ? PROJECT_PREFIX + lastName : SCRATCH_KEY);
+  if (restored) {
+    doc = ensureDocId(restored);
+    currentFileName = lastName || null;
+    currentId = doc.rootId;
+  }
 }
 render();
+updateFileLabel();
 booted = true;
 if (!storageOk) {
   setStatus('autosave off');
   statusEl.title = 'localStorage is unavailable (e.g. opened via file://). ' +
-    'Use Save to keep a umind.json file, or serve over http for autosave.';
+    'Use Save As to keep a .json file, or serve over http for autosave.';
 } else {
-  setStatus(restored ? 'loaded' : 'saved');
+  setStatus(currentFileName ? 'loaded' : 'ready');
 }

@@ -147,19 +147,30 @@ function buildNodeLi(node, isRoot) {
     li.appendChild(toggle);
   }
 
+  // The node text and its (optional) description marker share a flex row.
+  // The marker is a separate, non-editable element kept OUT of the
+  // contenteditable, so editing the title never disturbs or displaces it.
+  const row = document.createElement('div');
+  row.className = 'row';
+
   const div = document.createElement('div');
-  // A node with a description shows a 🗒 marker after its text (see
-  // .node.has-note::after); editing happens via the panel Edit button
-  // or Alt+Enter.
-  div.className =
-    'node' +
-    (isRoot ? ' root' : '') +
-    (hasChildren ? ' has-children' : '') +
-    (hasNote ? ' has-note' : '');
+  div.className = 'node' + (isRoot ? ' root' : '') + (hasChildren ? ' has-children' : '');
   div.contentEditable = 'true';
   div.dataset.id = node.id;
   div.textContent = node.text;
-  li.appendChild(div);
+  row.appendChild(div);
+
+  if (hasNote) {
+    const mark = document.createElement('span');
+    mark.className = 'note-mark';
+    mark.textContent = String.fromCodePoint(0x1f5d2) + '\uFE0E'; // 🗒 text-presentation
+    mark.contentEditable = 'false';
+    mark.title = 'Has a description — click to edit';
+    mark.setAttribute('aria-label', 'Has a description');
+    row.appendChild(mark);
+  }
+
+  li.appendChild(row);
 
   if (!node.collapsed && hasChildren) {
     const ul = document.createElement('ul');
@@ -417,18 +428,37 @@ outlineEl.addEventListener('focusin', (e) => {
   }
 });
 
-// Collapse/expand a branch when its toggle is clicked. This is a view state,
-// so it is not pushed onto the undo stack.
+// Clicks in the outline: toggle collapse, open a node's description via its
+// marker, or focus the node when the empty part of its row is clicked.
 outlineEl.addEventListener('click', (e) => {
   const toggle = e.target.closest('.toggle');
-  if (!toggle) return;
-  const path = findPath(doc.root, toggle.dataset.toggle);
-  if (!path) return;
-  const node = path[path.length - 1];
-  node.collapsed = !node.collapsed;
-  currentId = node.id;
-  currentOffset = Infinity;
-  render();
+  if (toggle) {
+    // Collapse/expand is view state, so it is not pushed onto the undo stack.
+    const path = findPath(doc.root, toggle.dataset.toggle);
+    if (!path) return;
+    const node = path[path.length - 1];
+    node.collapsed = !node.collapsed;
+    currentId = node.id;
+    currentOffset = Infinity;
+    render();
+    return;
+  }
+
+  const mark = e.target.closest('.note-mark');
+  if (mark) {
+    const nodeDiv = mark.parentElement.querySelector('.node');
+    if (nodeDiv) openNoteDialog(nodeDiv.dataset.id);
+    return;
+  }
+
+  // Clicking the empty area of a row focuses its node (full-row target).
+  if (e.target.classList.contains('row')) {
+    const nodeDiv = e.target.querySelector('.node');
+    if (nodeDiv) {
+      nodeDiv.focus();
+      placeCaret(nodeDiv, Infinity);
+    }
+  }
 });
 
 
@@ -491,7 +521,7 @@ noteDialog.addEventListener('close', () => {
     }
     currentId = id;
   }
-  render(); // refresh the has-note indicator and restore focus to the node
+  render(); // refresh the description marker and restore focus to the node
 });
 
 /* ---------------------------------------------------------------------- */

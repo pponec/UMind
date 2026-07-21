@@ -171,8 +171,17 @@ li > ul {
 
 li { position: relative; }
 
+/* Node text + its description marker on one line. The node shrinks to its
+   text so the marker sits right after it (not at the far right edge). */
+.row {
+  display: flex;
+  align-items: baseline;
+}
+
 .node {
   position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
   padding: 3px 6px 3px 26px;
   border-radius: 5px;
   outline: none;
@@ -235,18 +244,20 @@ li { position: relative; }
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
-/* Nodes that carry a description show a notepad marker after their text.
-   Rendered as generated content, so it never enters the editable text.
-   \FE0E requests the monochrome (text) glyph so `color` can darken it —
-   the colour emoji is too light to read on a highlighted row. */
-.node.has-note::after {
-  content: "\1F5D2\FE0E"; /* 🗒 (text presentation) */
+/* Description marker: a separate, non-editable element beside the node text
+   (kept out of the contenteditable so editing never displaces it). The glyph
+   is emitted in text presentation by the JS, so `color` can darken it — the
+   colour emoji is too light to read on a highlighted row. */
+.note-mark {
+  flex: none;
   margin-left: 12px;
   color: var(--fg);
   opacity: 0.85;
   font-size: 0.95em;
-  vertical-align: baseline;
+  cursor: pointer;
+  user-select: none;
 }
+.note-mark:hover { opacity: 1; }
 
 /* ---- Description dialog ---- */
 .note-dialog {

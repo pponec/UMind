@@ -69,6 +69,11 @@ let textBurstTimer = null;
 // while restoring state at startup.
 let booted = false;
 
+// Feature flag for drag-and-drop reordering. Set to false to disable, or
+// delete it together with the grip block in buildNodeLi, the "Drag and drop"
+// section near the bottom, and the .drag-grip/.drop-* CSS to remove entirely.
+const DND_ENABLED = true;
+
 const outlineEl = document.getElementById('outline');
 const statusEl = document.getElementById('status');
 const fileInput = document.getElementById('file-input');
@@ -168,6 +173,18 @@ function buildNodeLi(node, isRoot) {
     mark.title = 'Has a description — click to edit';
     mark.setAttribute('aria-label', 'Has a description');
     row.appendChild(mark);
+  }
+
+  // Drag handle in the gutter (removable: see DND_ENABLED). Root is not
+  // draggable — it has no siblings or parent.
+  if (DND_ENABLED && !isRoot) {
+    const grip = document.createElement('span');
+    grip.className = 'drag-grip';
+    grip.draggable = true;
+    grip.textContent = '⠿'; // ⠿ braille grip
+    grip.title = 'Drag to move';
+    grip.setAttribute('aria-hidden', 'true');
+    row.appendChild(grip);
   }
 
   li.appendChild(row);
@@ -834,6 +851,122 @@ fileInput.addEventListener('change', () => {
 
 function setStatus(text) {
   statusEl.textContent = text;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Drag and drop (optional — gated entirely by DND_ENABLED)               */
+/*                                                                        */
+/* Drag a node by the gutter grip and drop it before/after another node   */
+/* (any level), re-parenting as needed. Dropping onto the node itself,    */
+/* into its own subtree, or as a sibling of the root is disallowed. To    */
+/* remove the feature: delete this whole block, the grip block in         */
+/* buildNodeLi, the DND_ENABLED flag, and the .drag-grip/.drop-* CSS.     */
+/* ---------------------------------------------------------------------- */
+
+if (DND_ENABLED) {
+  let draggedId = null;
+  let draggedNode = null;
+  let markedRow = null; // row currently showing a drop indicator
+  let dropPos = null; // 'before' | 'after'
+
+  const containsId = (node, id) =>
+    node.id === id || node.children.some((c) => containsId(c, id));
+
+  const clearMark = () => {
+    if (markedRow) markedRow.classList.remove('drop-before', 'drop-after', 'drop-into');
+    markedRow = null;
+    dropPos = null;
+  };
+
+  /** True when `targetId` cannot receive the dragged node. */
+  const invalidTarget = (targetId) =>
+    !targetId ||
+    targetId === draggedId ||
+    targetId === doc.rootId || // can't become a sibling of the root
+    (draggedNode && containsId(draggedNode, targetId)); // no dropping into self
+
+  outlineEl.addEventListener('dragstart', (e) => {
+    const grip = e.target.closest('.drag-grip');
+    if (!grip) return;
+    const row = grip.closest('.row');
+    draggedId = row.querySelector('.node').dataset.id;
+    const path = findPath(doc.root, draggedId);
+    draggedNode = path ? path[path.length - 1] : null;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', draggedId);
+    row.classList.add('dragging');
+  });
+
+  outlineEl.addEventListener('dragover', (e) => {
+    if (!draggedId) return;
+    const row = e.target.closest('.row');
+    if (!row) return clearMark();
+    const targetId = row.querySelector('.node').dataset.id;
+    if (invalidTarget(targetId)) return clearMark();
+
+    e.preventDefault(); // permit the drop
+    e.dataTransfer.dropEffect = 'move';
+    const rect = row.getBoundingClientRect();
+    const pos = e.clientY - rect.top < rect.height / 2 ? 'before' : 'after';
+    if (row !== markedRow || pos !== dropPos) {
+      clearMark();
+      markedRow = row;
+      dropPos = pos;
+      row.classList.add(pos === 'before' ? 'drop-before' : 'drop-after');
+      // "after" an expanded branch drops as its first child — indent the hint.
+      const path = findPath(doc.root, targetId);
+      const targetNode = path ? path[path.length - 1] : null;
+      if (pos === 'after' && targetNode && !targetNode.collapsed && targetNode.children.length) {
+        row.classList.add('drop-into');
+      }
+    }
+  });
+
+  outlineEl.addEventListener('drop', (e) => {
+    if (!draggedId || !markedRow) return clearMark();
+    e.preventDefault();
+    const targetId = markedRow.querySelector('.node').dataset.id;
+    const pos = dropPos;
+    clearMark();
+    moveByDrop(draggedId, targetId, pos);
+  });
+
+  outlineEl.addEventListener('dragend', () => {
+    const dragging = outlineEl.querySelector('.row.dragging');
+    if (dragging) dragging.classList.remove('dragging');
+    clearMark();
+    draggedId = null;
+    draggedNode = null;
+  });
+
+  /** Move `dragId` to just before/after `targetId` in the target's parent. */
+  function moveByDrop(dragId, targetId, pos) {
+    if (invalidTarget(targetId)) return;
+    const dragPath = findPath(doc.root, dragId);
+    const targetPath = findPath(doc.root, targetId);
+    if (!dragPath || !targetPath) return;
+    const dragged = dragPath[dragPath.length - 1];
+    const dragParent = dragPath[dragPath.length - 2];
+    const target = targetPath[targetPath.length - 1];
+    const targetParent = targetPath[targetPath.length - 2];
+    if (!dragParent || !targetParent) return;
+
+    snapshot();
+    dragParent.children.splice(dragParent.children.indexOf(dragged), 1);
+    if (pos === 'after' && !target.collapsed && target.children.length) {
+      // Dropping just below an expanded branch means "become its first child"
+      // (visually the same spot as "before its first child").
+      target.children.unshift(dragged);
+    } else {
+      // Recompute the index after removal (matters when parents are the same).
+      let idx = targetParent.children.indexOf(target);
+      if (pos === 'after') idx += 1;
+      targetParent.children.splice(idx, 0, dragged);
+    }
+    currentId = dragId;
+    currentOffset = Infinity;
+    render();
+  }
 }
 
 /* ---------------------------------------------------------------------- */

@@ -78,18 +78,23 @@ main {
 }
 .outline { width: 620px; max-width: 100%; }
 
-/* ---- Detail panel ---- */
+/* ---- Detail panel (floating, pinned to the top of the viewport) ---- */
 .detail {
   flex: none;
   width: 340px;
-  align-self: stretch;
+  /* Height follows the content, not the (tall) column, so the sticky offset
+     has room to work and the panel stays pinned while the outline scrolls. */
+  align-self: flex-start;
   position: sticky;
-  top: 49px; /* below the sticky toolbar */
-  max-height: calc(100vh - 49px);
+  top: 61px; /* toolbar height + a small gap so it reads as floating */
+  max-height: calc(100vh - 73px);
   overflow: auto;
+  margin: 12px 12px 0 0;
   padding: 16px 18px;
-  border-left: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-radius: 10px;
   background: var(--toolbar-bg);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
 }
 .detail-head {
   display: flex;
@@ -137,7 +142,7 @@ main {
   color: var(--muted);
 }
 
-/* Stack the panel below the outline on narrow screens. */
+/* Stack the panel below the outline on narrow screens (no longer floating). */
 @media (max-width: 760px) {
   .workspace { flex-direction: column; }
   .detail {
@@ -145,8 +150,8 @@ main {
     align-self: stretch;
     position: static;
     max-height: none;
-    border-left: none;
-    border-top: 1px solid var(--border);
+    margin: 0 12px 16px;
+    box-shadow: none;
   }
 }
 

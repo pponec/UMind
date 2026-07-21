@@ -458,6 +458,17 @@ function openNoteDialog(id) {
   noteTextEl.focus();
 }
 
+// Keyboard shortcut inside the editor: Ctrl/Cmd+Enter saves and closes
+// (reusing the dialog's "save" path). Plain Enter stays a newline, and Esc
+// keeps its native cancel behaviour.
+noteDialog.addEventListener('keydown', (e) => {
+  if (e.isComposing) return;
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    noteDialog.close('save');
+  }
+});
+
 // On close, persist only when the user chose "Save" and the text changed.
 noteDialog.addEventListener('close', () => {
   const id = noteEditingId;

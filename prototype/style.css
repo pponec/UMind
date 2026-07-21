@@ -280,11 +280,18 @@ li { position: relative; }
 }
 .note-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 8px;
   margin: 0;
   padding: 0;
 }
+.note-hint {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+.note-hint kbd { margin: 0 1px; }
 .note-actions button.primary {
   border-color: var(--accent);
   background: var(--accent);

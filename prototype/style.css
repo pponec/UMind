@@ -219,8 +219,6 @@ li { position: relative; }
   color: var(--fg);
   background: var(--focus-bg);
 }
-/* A branch that carries a description tints its toggle instead of a bullet. */
-.toggle.has-note { color: var(--accent); }
 
 /* On branches with a toggle the bullet is redundant, so hide it. */
 .node.has-children::before { display: none; }
@@ -237,10 +235,17 @@ li { position: relative; }
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
-/* Nodes that carry a description get an accent-filled bullet. */
-.node.has-note::before {
-  background: var(--accent);
-  box-shadow: 0 0 0 2px var(--focus-bg);
+/* Nodes that carry a description show a notepad marker after their text.
+   Rendered as generated content, so it never enters the editable text.
+   \FE0E requests the monochrome (text) glyph so `color` can darken it —
+   the colour emoji is too light to read on a highlighted row. */
+.node.has-note::after {
+  content: "\1F5D2\FE0E"; /* 🗒 (text presentation) */
+  margin-left: 12px;
+  color: var(--fg);
+  opacity: 0.85;
+  font-size: 0.95em;
+  vertical-align: baseline;
 }
 
 /* ---- Description dialog ---- */

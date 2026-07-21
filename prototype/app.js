@@ -135,12 +135,11 @@ function buildNodeLi(node, isRoot) {
   const hasNote = !!(node.note && node.note.trim());
   if (node.collapsed) li.classList.add('collapsed');
 
-  // Collapse/expand toggle, shown only for branches that have children. When
-  // present it replaces the bullet, so it also carries the has-note accent.
+  // Collapse/expand toggle, shown only for branches that have children.
   if (hasChildren) {
     const toggle = document.createElement('button');
     toggle.type = 'button';
-    toggle.className = 'toggle' + (hasNote ? ' has-note' : '');
+    toggle.className = 'toggle';
     toggle.dataset.toggle = node.id;
     toggle.textContent = node.collapsed ? '▸' : '▾';
     toggle.setAttribute('aria-expanded', String(!node.collapsed));
@@ -149,8 +148,9 @@ function buildNodeLi(node, isRoot) {
   }
 
   const div = document.createElement('div');
-  // A leaf with a description gets a highlighted bullet (see .node.has-note);
-  // editing happens through the detail panel's Edit button or Alt+Enter.
+  // A node with a description shows a 🗒 marker after its text (see
+  // .node.has-note::after); editing happens via the panel Edit button
+  // or Alt+Enter.
   div.className =
     'node' +
     (isRoot ? ' root' : '') +

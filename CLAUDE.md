@@ -46,7 +46,7 @@ Server is stateless — no session. `{id}.json` lives in a configured directory.
 
 ## Keyboard model (core UX — low-mouse)
 
-`Enter` = new sibling below current + focus it; `Tab` = indent (become child of previous sibling); `Shift+Tab` = outdent (become sibling of parent); `↑`/`↓` = focus prev/next visible node; `Backspace` on empty node = delete, focus previous, reparent its children to the parent; `Ctrl+Z` / `Ctrl+Shift+Z` = undo/redo.
+`Enter` = new sibling below current + focus it; `Tab` = indent (become child of previous sibling); `Shift+Tab` = outdent (become sibling of parent); `↑`/`↓` = focus prev/next visible node; `Alt+↑`/`Alt+↓` = reorder the node among its siblings (no-op at the ends; added beyond the original spec); `Backspace` on empty node = delete, focus previous, reparent its children to the parent; `Ctrl+Z` / `Ctrl+Shift+Z` = undo/redo.
 
 ## Predecided edge cases (honor these — they exist to save iterations)
 

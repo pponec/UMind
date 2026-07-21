@@ -292,6 +292,23 @@ function outdent(id) {
   render();
 }
 
+/** Alt+Arrow: reorder `id` among its siblings by `delta` (-1 up, +1 down). */
+function moveSibling(id, delta) {
+  const path = findPath(doc.root, id);
+  const parent = path[path.length - 2];
+  if (!parent) return; // root has no siblings
+  const node = path[path.length - 1];
+  const i = parent.children.indexOf(node);
+  const j = i + delta;
+  if (j < 0 || j >= parent.children.length) return; // at an end -> no-op
+  currentOffset = caretOffset(); // keep the caret column across the move
+  snapshot();
+  parent.children.splice(i, 1);
+  parent.children.splice(j, 0, node);
+  currentId = id;
+  render();
+}
+
 /** Backspace on an empty node: delete it, reparent its children, move focus. */
 function deleteEmptyNode(id) {
   const path = findPath(doc.root, id);
@@ -357,12 +374,14 @@ outlineEl.addEventListener('keydown', (e) => {
 
     case 'ArrowUp':
       e.preventDefault();
-      moveFocus(id, -1);
+      if (e.altKey) moveSibling(id, -1); // reorder among siblings
+      else moveFocus(id, -1);
       return;
 
     case 'ArrowDown':
       e.preventDefault();
-      moveFocus(id, +1);
+      if (e.altKey) moveSibling(id, +1);
+      else moveFocus(id, +1);
       return;
 
     case 'Backspace':

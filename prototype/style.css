@@ -1,0 +1,330 @@
+/* UMind — outliner styling.
+   Hierarchy is conveyed purely by CSS indentation + vertical guide lines.
+   No connector lines in the MVP (see assignment §2). */
+
+:root {
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #6b7280;
+  --guide: #d0d7de;
+  --accent: #2563eb;
+  --focus-bg: #eef4ff;
+  --toolbar-bg: #f6f8fa;
+  --border: #d0d7de;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --fg: #e6edf3;
+    --muted: #8b949e;
+    --guide: #30363d;
+    --accent: #58a6ff;
+    --focus-bg: #161b22;
+    --toolbar-bg: #161b22;
+    --border: #30363d;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ---- Toolbar ---- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.brand { color: var(--accent); letter-spacing: 0.3px; }
+.spacer { flex: 1; }
+.status { color: var(--muted); font-size: 13px; min-width: 60px; }
+
+button {
+  font: inherit;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button:active { background: var(--focus-bg); }
+
+/* ---- Workspace: outline (left) + detail panel (right) ---- */
+.workspace {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+main {
+  flex: 0 1 auto;         /* hug the outline so the panel sits beside the tree */
+  min-width: 0;
+  padding: 18px 20px 40px;
+}
+.outline { width: 620px; max-width: 100%; }
+
+/* ---- Detail panel ---- */
+.detail {
+  flex: none;
+  width: 340px;
+  align-self: stretch;
+  position: sticky;
+  top: 49px; /* below the sticky toolbar */
+  max-height: calc(100vh - 49px);
+  overflow: auto;
+  padding: 16px 18px;
+  border-left: 1px solid var(--border);
+  background: var(--toolbar-bg);
+}
+.detail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.detail-title {
+  margin: 0;
+  font-size: 1.05em;
+  line-height: 1.3;
+  word-break: break-word;
+}
+.detail-body.empty { color: var(--muted); }
+.detail-body .hint kbd { margin: 0 1px; }
+
+/* Basic Markdown rendering inside the detail panel. */
+.markdown { font-size: 14px; line-height: 1.6; }
+.markdown > :first-child { margin-top: 0; }
+.markdown > :last-child { margin-bottom: 0; }
+.markdown h1,
+.markdown h2,
+.markdown h3 { margin: 1em 0 0.4em; line-height: 1.25; }
+.markdown h1 { font-size: 1.3em; }
+.markdown h2 { font-size: 1.15em; }
+.markdown h3 { font-size: 1.02em; }
+.markdown p { margin: 0.6em 0; }
+.markdown ul,
+.markdown ol { margin: 0.5em 0; padding-left: 1.4em; }
+.markdown li { margin: 0.2em 0; }
+.markdown a { color: var(--accent); }
+.markdown code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.markdown blockquote {
+  margin: 0.6em 0;
+  padding: 2px 0 2px 12px;
+  border-left: 3px solid var(--guide);
+  color: var(--muted);
+}
+
+/* Stack the panel below the outline on narrow screens. */
+@media (max-width: 760px) {
+  .workspace { flex-direction: column; }
+  .detail {
+    width: auto;
+    align-self: stretch;
+    position: static;
+    max-height: none;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 26px;
+}
+/* The top-level list holds only the root node, flush to the left. */
+ul.outline-root { padding-left: 0; }
+
+/* Nested lists draw the vertical guide line that shows depth. */
+li > ul {
+  border-left: 1px solid var(--guide);
+  margin-left: 9px;
+}
+
+li { position: relative; }
+
+.node {
+  position: relative;
+  padding: 3px 6px 3px 26px;
+  border-radius: 5px;
+  outline: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 1.5em;
+  cursor: text;
+}
+
+/* Bullet handle before each node. Its centre (left 8 + width 6 -> 11px) is
+   shared with the collapse toggle so leaves and branches line up per level. */
+.node::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 0.72em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+/* Collapse/expand toggle, sitting in the gutter to the left of the bullet.
+   z-index lifts it above the (position:relative) node, which follows it in
+   the DOM and would otherwise capture the click and start text editing. */
+.toggle {
+  position: absolute;
+  left: 1px;      /* width 20 -> centre at 11px, matching the bullet */
+  top: 2px;
+  z-index: 2;
+  width: 20px;
+  height: 22px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 22px;
+  text-align: center;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.toggle:hover {
+  color: var(--fg);
+  background: var(--focus-bg);
+}
+/* A branch that carries a description tints its toggle instead of a bullet. */
+.toggle.has-note { color: var(--accent); }
+
+/* On branches with a toggle the bullet is redundant, so hide it. */
+.node.has-children::before { display: none; }
+
+/* The root ("central topic") reads as the title. */
+.node.root {
+  font-weight: 600;
+  font-size: 1.15em;
+}
+.node.root::before { display: none; }
+
+.node:focus {
+  background: var(--focus-bg);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Nodes that carry a description get an accent-filled bullet. */
+.node.has-note::before {
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-bg);
+}
+
+/* ---- Description dialog ---- */
+.note-dialog {
+  width: min(560px, 92vw);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+.note-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+.note-dialog form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
+}
+.note-heading { margin: 0; font-size: 1.1em; }
+.note-subject { margin: 0; color: var(--muted); font-size: 13px; }
+.note-subject span { color: var(--fg); font-weight: 600; }
+#note-text {
+  width: 100%;
+  min-height: 160px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  padding: 10px;
+  resize: vertical;
+}
+.note-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+.note-actions button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+.note-actions button.primary:hover { filter: brightness(1.05); }
+
+/* ---- JSON I/O panel ---- */
+.io {
+  max-width: 900px;
+  margin: 0 20px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+.io summary { cursor: pointer; color: var(--muted); }
+#json {
+  width: 100%;
+  height: 220px;
+  margin-top: 8px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  padding: 8px;
+  resize: vertical;
+}
+
+/* ---- Help footer ---- */
+.help {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 10px 20px 24px;
+  color: var(--muted);
+  font-size: 13px;
+}
+kbd {
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 5px;
+  background: var(--toolbar-bg);
+  font-size: 12px;
+}

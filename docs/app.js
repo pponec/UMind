@@ -19,24 +19,34 @@ function genId() {
   return 'n_' + Math.random().toString(36).slice(2, 8);
 }
 
+/** Generate a stable, hidden project id, e.g. "m_3f9k1z". */
+function genMapId() {
+  return 'm_' + Math.random().toString(36).slice(2, 10);
+}
+
 /** Create a fresh node with the given text (empty by default). */
 function makeNode(text) {
   return { id: genId(), text: text || '', note: '', collapsed: false, children: [] };
 }
 
-/** Build the initial empty document. `id` is a stable, hidden project id
- *  (unused in Phase 0 — the file is the identity — but carried in the JSON
- *  so Phase 1 can address the map as /api/map/{id}). The root text doubles
- *  as the human project name and the suggested file name. */
-function newDocument() {
-  const root = makeNode('Untitled');
+/** Wrap a freshly-built tree as a document: pin the root id and attach a
+ *  project id. `id` is a stable, hidden project id (unused in Phase 0 — the
+ *  file is the identity — but carried in the JSON so Phase 1 can address the
+ *  map as /api/map/{id}). */
+function wrapDocument(root) {
   root.id = 'n_root';
-  return { version: 1, id: 'm_' + Math.random().toString(36).slice(2, 10), rootId: root.id, root: root };
+  return { version: 1, id: genMapId(), rootId: root.id, root: root };
+}
+
+/** Build the initial empty document. The root text doubles as the human
+ *  project name and the suggested file name. */
+function newDocument() {
+  return wrapDocument(makeNode('Untitled'));
 }
 
 /** Ensure a loaded document has a project id (older files may lack one). */
 function ensureDocId(d) {
-  if (d && !d.id) d.id = 'm_' + Math.random().toString(36).slice(2, 10);
+  if (d && !d.id) d.id = genMapId();
   return d;
 }
 
@@ -50,9 +60,7 @@ function buildDocFromTree(spec) {
     node.children = (n.children || []).map(build);
     return node;
   };
-  const root = build(spec);
-  root.id = 'n_root';
-  return { version: 1, id: 'm_' + Math.random().toString(36).slice(2, 10), rootId: root.id, root: root };
+  return wrapDocument(build(spec));
 }
 
 /** The document a brand-new visitor starts on: the welcome/instructions map
@@ -86,6 +94,13 @@ function findPath(root, id) {
     if (sub) return [root, ...sub];
   }
   return null;
+}
+
+/** The node with the given id, or null. Use findPath directly when the parent
+ *  or grandparent is also needed. */
+function nodeById(id) {
+  const path = findPath(doc.root, id);
+  return path ? path[path.length - 1] : null;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -486,11 +501,12 @@ outlineEl.addEventListener('input', (e) => {
   clearTimeout(textBurstTimer);
   textBurstTimer = setTimeout(endTextBurst, 700);
 
-  const path = findPath(doc.root, id);
-  if (path) path[path.length - 1].text = readNodeText(el);
+  const text = readNodeText(el);
+  const node = nodeById(id);
+  if (node) node.text = text;
   currentId = id;
   // Keep the detail panel's heading in sync while the title is edited.
-  detailTitleEl.textContent = readNodeText(el).trim();
+  detailTitleEl.textContent = text.trim();
   scheduleSave();
 });
 
@@ -509,9 +525,8 @@ outlineEl.addEventListener('click', (e) => {
   const toggle = e.target.closest('.toggle');
   if (toggle) {
     // Collapse/expand is view state, so it is not pushed onto the undo stack.
-    const path = findPath(doc.root, toggle.dataset.toggle);
-    if (!path) return;
-    const node = path[path.length - 1];
+    const node = nodeById(toggle.dataset.toggle);
+    if (!node) return;
     node.collapsed = !node.collapsed;
     currentId = node.id;
     currentOffset = Infinity;
@@ -577,9 +592,8 @@ let cancelRequested = false; // set before blur when the user chose Cancel/Esc
 
 /** Switch the detail panel into edit mode for the given node. */
 function enterNoteEdit(id) {
-  const path = findPath(doc.root, id);
-  if (!path) return;
-  const node = path[path.length - 1];
+  const node = nodeById(id);
+  if (!node) return;
   editingNoteId = id;
   currentId = id;
   cancelRequested = false;
@@ -609,13 +623,13 @@ function exitNoteEditUI() {
 function commitNoteEdit() {
   if (editingNoteId === null) return;
   const id = editingNoteId;
-  const path = findPath(doc.root, id);
+  const node = nodeById(id);
   const next = detailNoteText.value.replace(/\r/g, '');
   exitNoteEditUI();
-  if (path && (path[path.length - 1].note || '') !== next) {
+  if (node && (node.note || '') !== next) {
     endTextBurst();
     snapshot();
-    path[path.length - 1].note = next;
+    node.note = next;
   }
   currentId = id;
   render(); // refresh the outline marker + detail view, focus the node
@@ -686,8 +700,7 @@ function updateDetail() {
   // While the inline editor is open, never overwrite it (a stray render would
   // otherwise wipe the in-progress textarea).
   if (editingNoteId !== null) return;
-  const path = findPath(doc.root, currentId);
-  const node = path ? path[path.length - 1] : doc.root;
+  const node = nodeById(currentId) || doc.root;
   detailTitleEl.textContent = (node.text || '').trim();
   const note = (node.note || '').trim();
   if (note) {
@@ -1166,8 +1179,7 @@ if (DND_ENABLED) {
     if (!grip) return;
     const row = grip.closest('.row');
     draggedId = row.querySelector('.node').dataset.id;
-    const path = findPath(doc.root, draggedId);
-    draggedNode = path ? path[path.length - 1] : null;
+    draggedNode = nodeById(draggedId);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', draggedId);
     row.classList.add('dragging');
@@ -1190,8 +1202,7 @@ if (DND_ENABLED) {
       dropPos = pos;
       row.classList.add(pos === 'before' ? 'drop-before' : 'drop-after');
       // "after" an expanded branch drops as its first child — indent the hint.
-      const path = findPath(doc.root, targetId);
-      const targetNode = path ? path[path.length - 1] : null;
+      const targetNode = nodeById(targetId);
       if (pos === 'after' && targetNode && !targetNode.collapsed && targetNode.children.length) {
         row.classList.add('drop-into');
       }

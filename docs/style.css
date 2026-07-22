@@ -54,7 +54,7 @@ body {
 /* Full-size logo viewer (opened by clicking the toolbar logo). */
 .logo-dialog { border: none; background: transparent; padding: 0; max-width: 92vw; max-height: 92vh; }
 .logo-dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
-.logo-dialog img { display: block; max-width: 92vw; max-height: 92vh; width: auto; height: auto; cursor: zoom-out; border-radius: 12px; }
+.logo-dialog img { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; cursor: zoom-out; border-radius: 12px; }
 .brand {
   color: var(--accent);
   font-family: Arial, Helvetica, sans-serif;

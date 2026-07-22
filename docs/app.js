@@ -40,6 +40,29 @@ function ensureDocId(d) {
   return d;
 }
 
+/** Build a document from a plain { text, note, children } tree spec (see
+ *  welcome.js). Node ids are assigned here so the data file stays id-free. */
+function buildDocFromTree(spec) {
+  const build = (n) => {
+    const node = makeNode(n.text || '');
+    node.note = n.note || '';
+    node.collapsed = Boolean(n.collapsed);
+    node.children = (n.children || []).map(build);
+    return node;
+  };
+  const root = build(spec);
+  root.id = 'n_root';
+  return { version: 1, id: 'm_' + Math.random().toString(36).slice(2, 10), rootId: root.id, root: root };
+}
+
+/** The document a brand-new visitor starts on: the welcome/instructions map
+ *  when welcome.js is present, otherwise a blank project. */
+function starterDocument() {
+  return typeof window.WELCOME_TREE !== 'undefined'
+    ? buildDocFromTree(window.WELCOME_TREE)
+    : newDocument();
+}
+
 /** Deep clone a plain-data value (used for undo snapshots). */
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -1069,16 +1092,27 @@ document
   .getElementById('detail-edit')
   .addEventListener('click', () => openNoteDialog(currentId));
 
-// Boot: restore the last-open project from localStorage (if any), then render.
+// Boot: restore the last-open project from localStorage (if any), else seed the
+// welcome map for first-time visitors, then render.
 storageOk = storageAvailable();
 if (storageOk) {
-  const lastName = localStorage.getItem(LAST_KEY) || '';
+  const lastName = localStorage.getItem(LAST_KEY); // null = never saved here
   const restored = readStoredDoc(PROJECT_PREFIX + (lastName || 'untitled'));
   if (restored) {
     doc = ensureDocId(restored);
     currentFileName = lastName || null;
     currentId = doc.rootId;
+  } else if (lastName === null) {
+    // First-ever visit: greet with the instructions map instead of a blank one.
+    // Not persisted here (booted is still false), so it only becomes the user's
+    // project once they edit it; New/Open replace it before then.
+    doc = starterDocument();
+    currentId = doc.rootId;
   }
+} else {
+  // No persistence (e.g. file://): every load is fresh, so greet with the map.
+  doc = starterDocument();
+  currentId = doc.rootId;
 }
 render();
 updateFileLabel();

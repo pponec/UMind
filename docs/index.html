@@ -8,6 +8,8 @@
 </head>
 <body>
   <header class="toolbar">
+    <img class="brand-logo" src="images/umind-logo.png" alt="UMind logo — click for full size"
+         title="Show the logo at full size" height="32">
     <strong class="brand">UMind</strong>
     <button id="btn-undo" title="Ctrl+Z">Undo</button>
     <button id="btn-redo" title="Ctrl+Shift+Z">Redo</button>
@@ -74,6 +76,12 @@
         <button value="ok" class="primary">Save</button>
       </menu>
     </form>
+  </dialog>
+
+  <!-- Full-size logo viewer: click the toolbar logo to open, click anywhere
+       (or press Esc) to close. -->
+  <dialog id="logo-dialog" class="logo-dialog">
+    <img src="images/umind-logo.png" alt="UMind logo, full size">
   </dialog>
 
   <script src="markdown.js"></script>

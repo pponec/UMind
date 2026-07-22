@@ -1,4 +1,5 @@
-# UMind
+# UMind <sub><img src="docs/images/umind-logo.png" alt="UMind logo" height="80"></sub>
+
 UMind — a minimalist, self-hosted mind-mapping app. Servlet-based Java backend, ujo-web HTML5 frontend, plain-JSON storage, no cloud lock-in.
 
 **▶ Try it live:** https://pponec.github.io/UMind/?welcome — always opens the

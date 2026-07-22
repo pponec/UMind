@@ -49,7 +49,21 @@ body {
   top: 0;
   z-index: 10;
 }
-.brand { color: var(--accent); letter-spacing: 0.3px; }
+.brand-logo { height: 32px; width: auto; border-radius: 6px; flex: none; cursor: zoom-in; transform: translateY(-2px); }
+
+/* Full-size logo viewer (opened by clicking the toolbar logo). */
+.logo-dialog { border: none; background: transparent; padding: 0; max-width: 92vw; max-height: 92vh; }
+.logo-dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
+.logo-dialog img { display: block; max-width: 92vw; max-height: 92vh; width: auto; height: auto; cursor: zoom-out; border-radius: 12px; }
+.brand {
+  color: var(--accent);
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 800;
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: 0.3px;
+  margin-right: 14px; /* extra breathing room before the action buttons */
+}
 .spacer { flex: 1; }
 .status { color: var(--muted); font-size: 13px; min-width: 60px; }
 .file-name {
@@ -214,11 +228,14 @@ main {
     transition: max-height 0.2s ease;
     padding: 6px 14px calc(10px + env(safe-area-inset-bottom, 0px));
   }
-  /* Grip pulled up: more room for a long note / the editor + keyboard. */
+  /* Grip pulled up: more room for a long note / the editor + keyboard. An
+     explicit height (not just max-height) is needed because the default sheet
+     is content-fit (height: auto) — without it a note shorter than the screen
+     would keep its content height and the drag-up / expand would do nothing. */
   .detail.expanded,
-  .detail.editing { max-height: 85vh; }
+  .detail.editing { height: 85vh; max-height: 85vh; }
   /* Grip pulled down: a thin bar (just the title) to get the tree back. */
-  .detail.collapsed { max-height: 64px; }
+  .detail.collapsed { height: 64px; max-height: 64px; }
 
   /* Constant bottom reserve (independent of the sheet's height, so the scroll
      height never changes as the note length varies — that constancy is what

@@ -763,13 +763,18 @@ detailGrip.addEventListener('pointermove', (e) => {
   if (Math.abs(dy) > 6) gripMoved = true;
   const maxPx = Math.round(window.innerHeight * 0.85);
   gripHeight = Math.min(maxPx, Math.max(COLLAPSED_H, gripStartH + dy));
+  // Drive an explicit height (not just max-height): the sheet is content-fit
+  // (height: auto), so raising max-height alone would never grow it past the
+  // note. Setting height makes the box follow the finger up beyond the content.
+  detailEl.style.height = gripHeight + 'px';
   detailEl.style.maxHeight = gripHeight + 'px';
 });
 detailGrip.addEventListener('pointerup', () => {
   if (gripStartY === null) return;
   gripStartY = null;
   detailEl.style.transition = ''; // restore the CSS snap animation
-  detailEl.style.maxHeight = '';  // hand height back to the CSS classes
+  detailEl.style.height = '';     // hand height back to the CSS classes
+  detailEl.style.maxHeight = '';
   if (!gripMoved) { toggleDetail(); return; } // a tap collapses/restores
   // A real drag snaps to the nearest of collapsed / default (content, ≤50vh) /
   // expanded, starting from a clean slate.
@@ -1251,6 +1256,12 @@ document.getElementById('btn-open').addEventListener('click', openFile);
 document.getElementById('btn-save').addEventListener('click', saveFile);
 document.getElementById('btn-saveas').addEventListener('click', saveFileAs);
 detailEditBtn.addEventListener('click', () => enterNoteEdit(currentId));
+
+// Clicking the toolbar logo opens it at full size; a click anywhere on the
+// dialog (image or backdrop) or Esc closes it.
+const logoDialog = document.getElementById('logo-dialog');
+document.querySelector('.brand-logo').addEventListener('click', () => logoDialog.showModal());
+logoDialog.addEventListener('click', () => logoDialog.close());
 
 // Boot: restore the last-open project from localStorage (if any), else seed the
 // welcome map for first-time visitors, then render.

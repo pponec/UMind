@@ -56,11 +56,17 @@ function buildDocFromTree(spec) {
 }
 
 /** The document a brand-new visitor starts on: the welcome/instructions map
- *  when welcome.js is present, otherwise a blank project. */
+ *  when welcome.js is present, otherwise a blank project.
+ *  The welcome map is ephemeral — it carries a non-serialised `isWelcome` flag
+ *  so auto-save skips it (scheduleSave); it therefore re-seeds fresh from
+ *  welcome.js on every visit until the user picks New/Open or names it via
+ *  Save As (which clears the flag). This keeps welcome.js the single source of
+ *  truth and never leaves a stale greeting in localStorage. */
 function starterDocument() {
-  return typeof window.WELCOME_TREE !== 'undefined'
-    ? buildDocFromTree(window.WELCOME_TREE)
-    : newDocument();
+  if (typeof window.WELCOME_TREE === 'undefined') return newDocument();
+  const doc = buildDocFromTree(window.WELCOME_TREE);
+  doc.isWelcome = true; // never persisted; re-seeded each boot (see scheduleSave)
+  return doc;
 }
 
 /** Deep clone a plain-data value (used for undo snapshots). */
@@ -719,6 +725,11 @@ function persistProject() {
 /** Debounced auto-save of the whole document to its project key. */
 function scheduleSave() {
   if (!storageOk) return;
+  // The welcome/instructions map is ephemeral: edits to it are a preview, not a
+  // project, so they are not persisted. It becomes a real (saved) project only
+  // via New/Open or Save As (which clears isWelcome). Until then it re-seeds
+  // fresh from welcome.js on every visit.
+  if (doc.isWelcome) { setStatus('preview'); return; }
   setStatus('editing…');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
@@ -738,6 +749,18 @@ function readStoredDoc(key) {
     console.warn('localStorage load failed:', e);
   }
   return null;
+}
+
+/** Remove every stored UMind key from localStorage (all projects + last-open).
+ *  Used by the ?welcome URL flag to reset a stale copy in this browser. */
+function clearStoredProjects() {
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith('umind:')) // the app's whole namespace
+      .forEach((k) => localStorage.removeItem(k));
+  } catch (e) {
+    console.warn('Clearing stored projects failed:', e);
+  }
 }
 
 /* ---- Projects & export: New / Open / Save / Save As ----
@@ -868,6 +891,7 @@ async function saveFileAs() {
 
   currentFileName = name; // the identifier (also the localStorage key)
   fileHandle = handle; // may be null (fallback)
+  delete doc.isWelcome; // naming it makes it a real project: enable persistence
   persistProject(); // move the working copy to the new name's key immediately
   updateFileLabel();
 
@@ -1095,7 +1119,28 @@ document
 // Boot: restore the last-open project from localStorage (if any), else seed the
 // welcome map for first-time visitors, then render.
 storageOk = storageAvailable();
-if (storageOk) {
+
+// URL flag: ?welcome always (re)loads a fresh welcome map and wipes any stored
+// UMind projects in this browser — handy to preview welcome.js changes or to
+// reset a stale copy. The flag is then stripped from the address bar so a later
+// reload (e.g. after a Save As) does not wipe storage again.
+const forceWelcome = new URLSearchParams(location.search).has('welcome');
+if (forceWelcome) {
+  if (storageOk) clearStoredProjects();
+  try {
+    const url = new URL(location.href);
+    url.searchParams.delete('welcome');
+    history.replaceState(null, '', url.pathname + url.search + url.hash);
+  } catch (e) {
+    console.warn('Could not clean the ?welcome URL:', e);
+  }
+}
+
+if (forceWelcome) {
+  // Forced greeting: ephemeral, re-seeded from welcome.js (see starterDocument).
+  doc = starterDocument();
+  currentId = doc.rootId;
+} else if (storageOk) {
   const lastName = localStorage.getItem(LAST_KEY); // null = never saved here
   const restored = readStoredDoc(PROJECT_PREFIX + (lastName || 'untitled'));
   if (restored) {
@@ -1104,8 +1149,8 @@ if (storageOk) {
     currentId = doc.rootId;
   } else if (lastName === null) {
     // First-ever visit: greet with the instructions map instead of a blank one.
-    // Not persisted here (booted is still false), so it only becomes the user's
-    // project once they edit it; New/Open replace it before then.
+    // The welcome map is ephemeral (isWelcome flag) — not auto-saved, so it
+    // re-seeds each visit until the user picks New/Open or names it via Save As.
     doc = starterDocument();
     currentId = doc.rootId;
   }
@@ -1121,6 +1166,8 @@ if (!storageOk) {
   setStatus('autosave off');
   statusEl.title = 'localStorage is unavailable (e.g. opened via file://). ' +
     'Use Save As to keep a .json file, or serve over http for autosave.';
+} else if (doc.isWelcome) {
+  setStatus('preview'); // welcome map is not persisted (see scheduleSave)
 } else {
   setStatus(currentFileName ? 'loaded' : 'ready');
 }

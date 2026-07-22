@@ -10,14 +10,17 @@
  * node ids). `note` is an optional Markdown description shown in the right-hand
  * panel; nodes that have one display a 🗒 marker.
  *
- * The user takes over by editing these nodes, clicking **New** for a blank
- * project, or **Open** to load a saved .json — at which point this starter is
- * gone. Nothing here is special; it is just the initial content.
+ * This starter is ephemeral: app.js marks it with a non-serialised `isWelcome`
+ * flag so it is never auto-saved, and it re-seeds fresh from this file on every
+ * visit. Editing it is just a preview; it becomes a real, saved project only
+ * when the user clicks New/Open or names it via Save As — at which
+ * point this starter is gone. Nothing here is special; it is just the initial
+ * content, and changes to this file always show on the next reload.
  */
 (function (global) {
 
   global.WELCOME_TREE = {
-    text: 'Welcome to UMind 🧠',
+    text: 'Welcome to UMind 🌀',
     note:
       '**UMind** is a keyboard-first outliner / mind map — a nested list of ' +
       'editable nodes.\n\n' +
@@ -84,7 +87,10 @@
           'survives a reload with zero effort.\n\n' +
           '- **Save / Save As** — export a `.json` file to disk (backup, or move between machines)\n' +
           '- **Open** — load a `.json` file back\n' +
-          '- **New** — start a fresh, empty project',
+          '- **New** — start a fresh, empty project\n\n' +
+          'Want this guide back? Open [?welcome](?welcome) ' +
+          '(e.g. `http://localhost:8000/?welcome`) — it reloads this welcome ' +
+          'page and clears the maps saved in this browser.',
         children: [],
       },
       {

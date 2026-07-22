@@ -46,7 +46,7 @@
         ],
       },
       {
-        text: 'Descriptions 🗒',
+        text: 'Descriptions ✏️',
         note:
           'Any node can carry a longer **description** written in Markdown — ' +
           'shown right here in this panel.\n\n' +

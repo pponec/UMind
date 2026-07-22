@@ -12,11 +12,11 @@
     <button id="btn-undo" title="Ctrl+Z">Undo</button>
     <button id="btn-redo" title="Ctrl+Shift+Z">Redo</button>
     <span class="spacer"></span>
-    <button id="btn-new" title="Start a new document">New</button>
-    <button id="btn-open" title="Open a project file">Open…</button>
-    <button id="btn-save" title="Save to the current file">Save</button>
-    <button id="btn-saveas" title="Save to a new file (named after the title)">Save As…</button>
-    <span id="file-name" class="file-name" title="Current project file">(unsaved)</span>
+    <button id="btn-new" title="Start a new project (auto-saved in the browser)">New</button>
+    <button id="btn-open" title="Open a .json project file">Open…</button>
+    <button id="btn-save" title="Export the project to its .json file">Save</button>
+    <button id="btn-saveas" title="Name the project and export a .json file">Save As…</button>
+    <span id="file-name" class="file-name" title="Current project (auto-saved in the browser)">(unsaved)</span>
     <span id="status" class="status" title="Auto-saved to your browser">saved</span>
   </header>
 
@@ -46,7 +46,7 @@
     <span><kbd>Alt</kbd>+<kbd>Enter</kbd> description</span>
     <span><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> undo/redo</span>
     <span>drag <span aria-hidden="true">⠿</span> to move</span>
-    <span class="persist-note">Each project is a <code>.json</code> file (the title names it) · auto-saved in this browser between sessions · <strong>New</strong>/<strong>Open</strong>/<strong>Save</strong>/<strong>Save&nbsp;As</strong> manage the file</span>
+    <span class="persist-note">Your work is <strong>auto-saved in this browser</strong> · <strong>Save</strong>/<strong>Save&nbsp;As</strong> export a <code>.json</code> file to disk · <strong>Open</strong> loads one · <strong>New</strong> starts a fresh project</span>
   </footer>
 
   <dialog id="name-dialog" class="note-dialog">

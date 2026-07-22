@@ -26,11 +26,25 @@
     </main>
 
     <aside id="detail" class="detail">
+      <!-- Drag handle: only shown on the mobile bottom card (see style.css).
+           Drag it down or tap it to close the card. -->
+      <div id="detail-grip" class="detail-grip" title="Drag to resize · tap to collapse" aria-hidden="true"></div>
       <div class="detail-head">
         <h2 id="detail-title" class="detail-title"></h2>
         <button id="detail-edit" type="button">Edit</button>
       </div>
+      <!-- View mode: the rendered note. -->
       <div id="detail-body" class="detail-body markdown"></div>
+      <!-- Edit mode: an in-panel editor (replaces the old modal dialog). -->
+      <div id="detail-editor" class="detail-editor" hidden>
+        <textarea id="detail-note-text" spellcheck="true"
+          placeholder="Add a longer description for this branch…"></textarea>
+        <menu class="note-actions">
+          <span class="note-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> save · <kbd>Esc</kbd> cancel</span>
+          <button type="button" id="detail-cancel" class="secondary">Cancel</button>
+          <button type="button" id="detail-save" class="primary">Save</button>
+        </menu>
+      </div>
     </aside>
   </div>
 
@@ -58,20 +72,6 @@
         <span class="note-hint">The file name is the project's key</span>
         <button type="button" id="name-cancel" class="secondary">Cancel</button>
         <button value="ok" class="primary">Save</button>
-      </menu>
-    </form>
-  </dialog>
-
-  <dialog id="note-dialog" class="note-dialog">
-    <form method="dialog">
-      <h2 class="note-heading">Description</h2>
-      <p class="note-subject">for <span id="note-title"></span></p>
-      <textarea id="note-text" spellcheck="true"
-        placeholder="Add a longer description for this branch…"></textarea>
-      <menu class="note-actions">
-        <span class="note-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> to save · <kbd>Esc</kbd> to cancel</span>
-        <button value="cancel" class="secondary">Cancel</button>
-        <button value="save" class="primary">Save</button>
       </menu>
     </form>
   </dialog>

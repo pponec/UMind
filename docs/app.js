@@ -416,8 +416,8 @@ outlineEl.addEventListener('keydown', (e) => {
   switch (e.key) {
     case 'Enter':
       e.preventDefault();
-      // Alt+Enter opens the node's description dialog instead of a new sibling.
-      if (e.altKey) openNoteDialog(id);
+      // Alt+Enter edits the node's description instead of adding a new sibling.
+      if (e.altKey) enterNoteEdit(id);
       else insertSiblingAfter(id);
       return;
 
@@ -522,7 +522,14 @@ outlineEl.addEventListener('click', (e) => {
   const mark = e.target.closest('.note-mark');
   if (mark) {
     const nodeDiv = mark.parentElement.querySelector('.node');
-    if (nodeDiv) openNoteDialog(nodeDiv.dataset.id);
+    if (nodeDiv) {
+      // Move focus to the marked row and show its note (rendered) in the
+      // detail panel. Editing is a deliberate step (Edit button / Alt+Enter).
+      currentId = nodeDiv.dataset.id;
+      nodeDiv.focus();
+      placeCaret(nodeDiv, Infinity);
+      updateDetail();
+    }
     return;
   }
 
@@ -548,56 +555,106 @@ outlineEl.addEventListener('paste', (e) => {
 });
 
 /* ---------------------------------------------------------------------- */
-/* Node description dialog                                                 */
+/* Node description — inline editor inside the detail panel                */
+/*                                                                        */
+/* The description is edited in place in the detail panel (no modal). The */
+/* panel swaps its rendered-Markdown body for a textarea while editing.   */
+/* Robustness: the outline's keyboard shortcuts only fire on a focused    */
+/* `.node`, so nothing in the tree reacts while the textarea has focus.   */
+/* Leaving the textarea (blur — via Save, a click elsewhere, or focusing  */
+/* another node) is the single commit signal; Cancel/Esc set a flag first */
+/* so the same blur discards instead of saves.                            */
 /* ---------------------------------------------------------------------- */
 
-const noteDialog = document.getElementById('note-dialog');
-const noteTitleEl = document.getElementById('note-title');
-const noteTextEl = document.getElementById('note-text');
-let noteEditingId = null; // node whose description is being edited
+const detailEditBtn = document.getElementById('detail-edit');
+const detailEditor = document.getElementById('detail-editor');
+const detailNoteText = document.getElementById('detail-note-text');
+const detailSaveBtn = document.getElementById('detail-save');
+const detailCancelBtn = document.getElementById('detail-cancel');
 
-/** Open the modal description editor for the given node. */
-function openNoteDialog(id) {
+let editingNoteId = null;   // node whose description is being edited in place
+let cancelRequested = false; // set before blur when the user chose Cancel/Esc
+
+/** Switch the detail panel into edit mode for the given node. */
+function enterNoteEdit(id) {
   const path = findPath(doc.root, id);
   if (!path) return;
   const node = path[path.length - 1];
-  noteEditingId = id;
-  noteTitleEl.textContent = node.text.trim() || '(untitled node)';
-  noteTextEl.value = node.note || '';
-  noteDialog.showModal();
-  noteTextEl.focus();
+  editingNoteId = id;
+  currentId = id;
+  cancelRequested = false;
+  detailTitleEl.textContent = node.text.trim() || '(untitled node)';
+  detailBodyEl.hidden = true;
+  detailEditBtn.hidden = true;
+  detailEditor.hidden = false;
+  // On mobile the .editing class grows the sheet (85vh) so the textarea and
+  // keyboard have room; on desktop it is inert.
+  detailEl.classList.add('editing');
+  detailEl.classList.remove('collapsed', 'expanded');
+  lastDetailId = id; // editing counts as "already shown", don't auto-collapse
+  detailNoteText.value = node.note || '';
+  detailNoteText.focus();
 }
 
-// Keyboard shortcut inside the editor: Ctrl/Cmd+Enter saves and closes
-// (reusing the dialog's "save" path). Plain Enter stays a newline, and Esc
-// keeps its native cancel behaviour.
-noteDialog.addEventListener('keydown', (e) => {
+/** Restore the view-mode UI (shared by commit and cancel). */
+function exitNoteEditUI() {
+  editingNoteId = null;
+  detailEditor.hidden = true;
+  detailBodyEl.hidden = false;
+  detailEditBtn.hidden = false;
+  detailEl.classList.remove('editing');
+}
+
+/** Persist the edited note (when changed) and return to view mode. */
+function commitNoteEdit() {
+  if (editingNoteId === null) return;
+  const id = editingNoteId;
+  const path = findPath(doc.root, id);
+  const next = detailNoteText.value.replace(/\r/g, '');
+  exitNoteEditUI();
+  if (path && (path[path.length - 1].note || '') !== next) {
+    endTextBurst();
+    snapshot();
+    path[path.length - 1].note = next;
+  }
+  currentId = id;
+  render(); // refresh the outline marker + detail view, focus the node
+}
+
+/** Discard edits and return to view mode. */
+function cancelNoteEdit() {
+  if (editingNoteId === null) return;
+  const id = editingNoteId;
+  exitNoteEditUI();
+  currentId = id;
+  render();
+}
+
+// Leaving the textarea is the universal commit signal — it fires whether the
+// user clicked Save, tabbed away, clicked another node, or clicked a toolbar
+// button. Cancel/Esc set cancelRequested first so this discards instead.
+detailNoteText.addEventListener('blur', () => {
+  if (editingNoteId === null) return;
+  if (cancelRequested) { cancelRequested = false; cancelNoteEdit(); }
+  else commitNoteEdit();
+});
+
+detailNoteText.addEventListener('keydown', (e) => {
   if (e.isComposing) return;
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+  if (e.key === 'Escape') {
     e.preventDefault();
-    noteDialog.close('save');
+    cancelRequested = true;
+    detailNoteText.blur(); // triggers cancelNoteEdit via the blur handler
+  } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    detailNoteText.blur(); // triggers commitNoteEdit via the blur handler
   }
 });
 
-// On close, persist only when the user chose "Save" and the text changed.
-noteDialog.addEventListener('close', () => {
-  const id = noteEditingId;
-  noteEditingId = null;
-  if (id && noteDialog.returnValue === 'save') {
-    const path = findPath(doc.root, id);
-    if (path) {
-      const node = path[path.length - 1];
-      const next = noteTextEl.value.replace(/\r/g, '');
-      if ((node.note || '') !== next) {
-        endTextBurst();
-        snapshot();
-        node.note = next;
-      }
-    }
-    currentId = id;
-  }
-  render(); // refresh the description marker and restore focus to the node
-});
+// pointerdown fires before the textarea's blur, so it can flag the intent.
+detailCancelBtn.addEventListener('pointerdown', () => { cancelRequested = true; });
+detailCancelBtn.addEventListener('click', () => { if (editingNoteId !== null) cancelNoteEdit(); });
+detailSaveBtn.addEventListener('click', () => { if (editingNoteId !== null) commitNoteEdit(); });
 
 /* ---------------------------------------------------------------------- */
 /* Detail panel — renders the focused node's description as Markdown       */
@@ -610,11 +667,25 @@ noteDialog.addEventListener('close', () => {
  * so note content can never inject markup.
  */
 
+const detailEl = document.getElementById('detail');
 const detailTitleEl = document.getElementById('detail-title');
 const detailBodyEl = document.getElementById('detail-body');
 
-/** Refresh the right-hand panel to show the focused node's description. */
+// Mobile: the detail panel is a bottom bar that expands into a full sheet.
+// It is ALWAYS present for the focused node — collapsed it is a thin title bar
+// carrying the Add/Edit button (so a note can always be started); expanded it
+// shows the rendered note. On desktop these classes are inert: the side panel
+// always shows everything.
+const mobileSheetQuery = window.matchMedia('(max-width: 760px)');
+function isMobileSheet() { return mobileSheetQuery.matches; }
+
+let lastDetailId = null; // last node shown, so we only collapse on real moves
+
+/** Refresh the detail panel for the focused node's description. */
 function updateDetail() {
+  // While the inline editor is open, never overwrite it (a stray render would
+  // otherwise wipe the in-progress textarea).
+  if (editingNoteId !== null) return;
   const path = findPath(doc.root, currentId);
   const node = path ? path[path.length - 1] : doc.root;
   detailTitleEl.textContent = (node.text || '').trim();
@@ -624,11 +695,90 @@ function updateDetail() {
     detailBodyEl.classList.remove('empty');
   } else {
     detailBodyEl.innerHTML =
-      '<p class="hint">No description yet. Click ' +
-      '<strong>Edit</strong> above or press <kbd>Alt</kbd>+<kbd>Enter</kbd>.</p>';
+      '<p class="hint">No description yet — press ' +
+      '<strong>＋ Add</strong> or <kbd>Alt</kbd>+<kbd>Enter</kbd>.</p>';
     detailBodyEl.classList.add('empty');
   }
+  // One button both adds (when empty) and edits (when a note exists).
+  detailEditBtn.textContent = note ? 'Edit' : '＋ Add';
+  // Reset the sheet to its content-fitting default when focus actually moves to
+  // another node (drop any manual expand/collapse). Re-renders of the SAME node
+  // (e.g. right after saving) keep whatever height state the user set.
+  if (currentId !== lastDetailId) {
+    detailEl.classList.remove('expanded', 'collapsed');
+    lastDetailId = currentId;
+    revealFocusedRow();
+  }
 }
+
+/** On mobile, nudge the focused row up if it would sit behind the sheet. The
+ *  browser's own focus scroll treats a row hidden behind the fixed sheet as
+ *  "visible" and won't move it, so we do it explicitly — but only when the row
+ *  actually overlaps the sheet, and by the minimum amount, so it never jumps.
+ *  Uses the sheet's live top, so it tracks whatever height the content gives. */
+function revealFocusedRow() {
+  if (!isMobileSheet()) return;
+  const el = nodeEl(currentId);
+  if (!el) return;
+  const sheetTop = detailEl.getBoundingClientRect().top - 8; // small gap
+  const overlap = el.getBoundingClientRect().bottom - sheetTop;
+  if (overlap > 0) window.scrollBy(0, Math.ceil(overlap));
+}
+
+/** Collapse the sheet to a bar, or restore it to the content-fitting default
+ *  (inert on desktop). Used by a plain tap on the grip or title. */
+function toggleDetail() {
+  if (detailEl.classList.contains('collapsed')) {
+    detailEl.classList.remove('collapsed');
+  } else {
+    detailEl.classList.add('collapsed');
+    detailEl.classList.remove('expanded');
+  }
+}
+
+// Tapping the title collapses/restores the sheet on mobile (a quick way to get
+// the tree back, and to bring the note back again).
+detailTitleEl.addEventListener('click', () => { if (isMobileSheet()) toggleDetail(); });
+
+// The grip drags the sheet's height: up to grow (read a long note / edit), down
+// to shrink to a bar; a plain tap collapses/restores. On release it snaps to
+// the nearest of collapsed / content-default / expanded. Pointer events unify
+// mouse and touch; capture + preventDefault stop the drag from selecting text.
+const detailGrip = document.getElementById('detail-grip');
+const COLLAPSED_H = 64; // px height of the collapsed bar (matches CSS)
+let gripStartY = null, gripStartH = 0, gripHeight = 0, gripMoved = false;
+
+detailGrip.addEventListener('pointerdown', (e) => {
+  gripStartY = e.clientY;
+  gripStartH = detailEl.offsetHeight;
+  gripHeight = gripStartH;
+  gripMoved = false;
+  try { detailGrip.setPointerCapture(e.pointerId); } catch (_) { /* non-fatal */ }
+  detailEl.style.transition = 'none'; // follow the finger with no lag
+  e.preventDefault(); // no text selection while dragging the handle
+});
+detailGrip.addEventListener('pointermove', (e) => {
+  if (gripStartY === null) return;
+  const dy = gripStartY - e.clientY; // dragging up grows the sheet
+  if (Math.abs(dy) > 6) gripMoved = true;
+  const maxPx = Math.round(window.innerHeight * 0.85);
+  gripHeight = Math.min(maxPx, Math.max(COLLAPSED_H, gripStartH + dy));
+  detailEl.style.maxHeight = gripHeight + 'px';
+});
+detailGrip.addEventListener('pointerup', () => {
+  if (gripStartY === null) return;
+  gripStartY = null;
+  detailEl.style.transition = ''; // restore the CSS snap animation
+  detailEl.style.maxHeight = '';  // hand height back to the CSS classes
+  if (!gripMoved) { toggleDetail(); return; } // a tap collapses/restores
+  // A real drag snaps to the nearest of collapsed / default (content, ≤50vh) /
+  // expanded, starting from a clean slate.
+  detailEl.classList.remove('collapsed', 'expanded');
+  const vh = window.innerHeight;
+  if (gripHeight <= vh * 0.22) detailEl.classList.add('collapsed');
+  else if (gripHeight >= vh * 0.6) detailEl.classList.add('expanded');
+  // else: leave both off → the content-fitting default.
+});
 
 /* ---------------------------------------------------------------------- */
 /* Persistence (Phase 0 stand-in for the server)                          */
@@ -1100,9 +1250,7 @@ document.getElementById('btn-new').addEventListener('click', newFile);
 document.getElementById('btn-open').addEventListener('click', openFile);
 document.getElementById('btn-save').addEventListener('click', saveFile);
 document.getElementById('btn-saveas').addEventListener('click', saveFileAs);
-document
-  .getElementById('detail-edit')
-  .addEventListener('click', () => openNoteDialog(currentId));
+detailEditBtn.addEventListener('click', () => enterNoteEdit(currentId));
 
 // Boot: restore the last-open project from localStorage (if any), else seed the
 // welcome map for first-time visitors, then render.

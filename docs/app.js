@@ -416,8 +416,8 @@ outlineEl.addEventListener('keydown', (e) => {
   switch (e.key) {
     case 'Enter':
       e.preventDefault();
-      // Alt+Enter opens the node's description dialog instead of a new sibling.
-      if (e.altKey) openNoteDialog(id);
+      // Alt+Enter edits the node's description instead of adding a new sibling.
+      if (e.altKey) enterNoteEdit(id);
       else insertSiblingAfter(id);
       return;
 
@@ -523,13 +523,12 @@ outlineEl.addEventListener('click', (e) => {
   if (mark) {
     const nodeDiv = mark.parentElement.querySelector('.node');
     if (nodeDiv) {
-      // Move focus to the marked row and mirror its note into the detail
-      // panel, then open the editor (matches focusing the node directly).
+      // Move focus to the marked row and show its note (rendered) in the
+      // detail panel. Editing is a deliberate step (Edit button / Alt+Enter).
       currentId = nodeDiv.dataset.id;
       nodeDiv.focus();
       placeCaret(nodeDiv, Infinity);
       updateDetail();
-      openNoteDialog(currentId);
     }
     return;
   }
@@ -556,56 +555,105 @@ outlineEl.addEventListener('paste', (e) => {
 });
 
 /* ---------------------------------------------------------------------- */
-/* Node description dialog                                                 */
+/* Node description — inline editor inside the detail panel                */
+/*                                                                        */
+/* The description is edited in place in the detail panel (no modal). The */
+/* panel swaps its rendered-Markdown body for a textarea while editing.   */
+/* Robustness: the outline's keyboard shortcuts only fire on a focused    */
+/* `.node`, so nothing in the tree reacts while the textarea has focus.   */
+/* Leaving the textarea (blur — via Save, a click elsewhere, or focusing  */
+/* another node) is the single commit signal; Cancel/Esc set a flag first */
+/* so the same blur discards instead of saves.                            */
 /* ---------------------------------------------------------------------- */
 
-const noteDialog = document.getElementById('note-dialog');
-const noteTitleEl = document.getElementById('note-title');
-const noteTextEl = document.getElementById('note-text');
-let noteEditingId = null; // node whose description is being edited
+const detailEditBtn = document.getElementById('detail-edit');
+const detailEditor = document.getElementById('detail-editor');
+const detailNoteText = document.getElementById('detail-note-text');
+const detailSaveBtn = document.getElementById('detail-save');
+const detailCancelBtn = document.getElementById('detail-cancel');
 
-/** Open the modal description editor for the given node. */
-function openNoteDialog(id) {
+let editingNoteId = null;   // node whose description is being edited in place
+let cancelRequested = false; // set before blur when the user chose Cancel/Esc
+
+/** Switch the detail panel into edit mode for the given node. */
+function enterNoteEdit(id) {
   const path = findPath(doc.root, id);
   if (!path) return;
   const node = path[path.length - 1];
-  noteEditingId = id;
-  noteTitleEl.textContent = node.text.trim() || '(untitled node)';
-  noteTextEl.value = node.note || '';
-  noteDialog.showModal();
-  noteTextEl.focus();
+  editingNoteId = id;
+  currentId = id;
+  cancelRequested = false;
+  detailTitleEl.textContent = node.text.trim() || '(untitled node)';
+  detailBodyEl.hidden = true;
+  detailEditBtn.hidden = true;
+  detailEditor.hidden = false;
+  // On mobile the card grows so the textarea and keyboard have room; on
+  // desktop these classes are inert. Ensure the card is visible while editing.
+  detailEl.classList.add('editing', 'open');
+  sheetDismissedForId = null;
+  detailNoteText.value = node.note || '';
+  detailNoteText.focus();
 }
 
-// Keyboard shortcut inside the editor: Ctrl/Cmd+Enter saves and closes
-// (reusing the dialog's "save" path). Plain Enter stays a newline, and Esc
-// keeps its native cancel behaviour.
-noteDialog.addEventListener('keydown', (e) => {
+/** Restore the view-mode UI (shared by commit and cancel). */
+function exitNoteEditUI() {
+  editingNoteId = null;
+  detailEditor.hidden = true;
+  detailBodyEl.hidden = false;
+  detailEditBtn.hidden = false;
+  detailEl.classList.remove('editing');
+}
+
+/** Persist the edited note (when changed) and return to view mode. */
+function commitNoteEdit() {
+  if (editingNoteId === null) return;
+  const id = editingNoteId;
+  const path = findPath(doc.root, id);
+  const next = detailNoteText.value.replace(/\r/g, '');
+  exitNoteEditUI();
+  if (path && (path[path.length - 1].note || '') !== next) {
+    endTextBurst();
+    snapshot();
+    path[path.length - 1].note = next;
+  }
+  currentId = id;
+  render(); // refresh the outline marker + detail view, focus the node
+}
+
+/** Discard edits and return to view mode. */
+function cancelNoteEdit() {
+  if (editingNoteId === null) return;
+  const id = editingNoteId;
+  exitNoteEditUI();
+  currentId = id;
+  render();
+}
+
+// Leaving the textarea is the universal commit signal — it fires whether the
+// user clicked Save, tabbed away, clicked another node, or clicked a toolbar
+// button. Cancel/Esc set cancelRequested first so this discards instead.
+detailNoteText.addEventListener('blur', () => {
+  if (editingNoteId === null) return;
+  if (cancelRequested) { cancelRequested = false; cancelNoteEdit(); }
+  else commitNoteEdit();
+});
+
+detailNoteText.addEventListener('keydown', (e) => {
   if (e.isComposing) return;
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+  if (e.key === 'Escape') {
     e.preventDefault();
-    noteDialog.close('save');
+    cancelRequested = true;
+    detailNoteText.blur(); // triggers cancelNoteEdit via the blur handler
+  } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    detailNoteText.blur(); // triggers commitNoteEdit via the blur handler
   }
 });
 
-// On close, persist only when the user chose "Save" and the text changed.
-noteDialog.addEventListener('close', () => {
-  const id = noteEditingId;
-  noteEditingId = null;
-  if (id && noteDialog.returnValue === 'save') {
-    const path = findPath(doc.root, id);
-    if (path) {
-      const node = path[path.length - 1];
-      const next = noteTextEl.value.replace(/\r/g, '');
-      if ((node.note || '') !== next) {
-        endTextBurst();
-        snapshot();
-        node.note = next;
-      }
-    }
-    currentId = id;
-  }
-  render(); // refresh the description marker and restore focus to the node
-});
+// pointerdown fires before the textarea's blur, so it can flag the intent.
+detailCancelBtn.addEventListener('pointerdown', () => { cancelRequested = true; });
+detailCancelBtn.addEventListener('click', () => { if (editingNoteId !== null) cancelNoteEdit(); });
+detailSaveBtn.addEventListener('click', () => { if (editingNoteId !== null) commitNoteEdit(); });
 
 /* ---------------------------------------------------------------------- */
 /* Detail panel — renders the focused node's description as Markdown       */
@@ -633,6 +681,9 @@ function isMobileSheet() { return mobileSheetQuery.matches; }
 
 /** Refresh the right-hand panel to show the focused node's description. */
 function updateDetail() {
+  // While the inline editor is open, never overwrite it (a stray render would
+  // otherwise wipe the in-progress textarea).
+  if (editingNoteId !== null) return;
   const path = findPath(doc.root, currentId);
   const node = path ? path[path.length - 1] : doc.root;
   detailTitleEl.textContent = (node.text || '').trim();
@@ -672,20 +723,25 @@ function closeDetailSheet() {
 
 document.getElementById('detail-close').addEventListener('click', closeDetailSheet);
 
-// Swipe-down-to-dismiss on the bottom sheet. Only fires when the sheet is
-// scrolled to its top, so scrolling long note content is unaffected.
-let sheetTouchStartY = null;
-detailEl.addEventListener('touchstart', (e) => {
-  sheetTouchStartY = e.touches[0].clientY;
-}, { passive: true });
-detailEl.addEventListener('touchmove', (e) => {
-  if (sheetTouchStartY === null) return;
-  if (e.touches[0].clientY - sheetTouchStartY > 60 && detailEl.scrollTop <= 0) {
-    closeDetailSheet();
-    sheetTouchStartY = null;
-  }
-}, { passive: true });
-detailEl.addEventListener('touchend', () => { sheetTouchStartY = null; });
+// The grip handle dismisses the card: drag it down, or just tap it. Pointer
+// events unify mouse and touch, and capturing the pointer + preventing the
+// default stops the drag from turning into a text selection (the old bug).
+const detailGrip = document.getElementById('detail-grip');
+let gripStartY = null;
+detailGrip.addEventListener('pointerdown', (e) => {
+  gripStartY = e.clientY;
+  detailGrip.setPointerCapture(e.pointerId);
+  e.preventDefault(); // no text selection while dragging the handle
+});
+detailGrip.addEventListener('pointermove', (e) => {
+  if (gripStartY === null) return;
+  if (e.clientY - gripStartY > 40) { closeDetailSheet(); gripStartY = null; }
+});
+detailGrip.addEventListener('pointerup', (e) => {
+  // A tap (negligible movement) closes it too.
+  if (gripStartY !== null && Math.abs(e.clientY - gripStartY) < 6) closeDetailSheet();
+  gripStartY = null;
+});
 
 /* ---------------------------------------------------------------------- */
 /* Persistence (Phase 0 stand-in for the server)                          */
@@ -1169,9 +1225,7 @@ document.getElementById('btn-new').addEventListener('click', newFile);
 document.getElementById('btn-open').addEventListener('click', openFile);
 document.getElementById('btn-save').addEventListener('click', saveFile);
 document.getElementById('btn-saveas').addEventListener('click', saveFileAs);
-document
-  .getElementById('detail-edit')
-  .addEventListener('click', () => openNoteDialog(currentId));
+detailEditBtn.addEventListener('click', () => enterNoteEdit(currentId));
 
 // Boot: restore the last-open project from localStorage (if any), else seed the
 // welcome map for first-time visitors, then render.

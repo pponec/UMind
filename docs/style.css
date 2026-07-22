@@ -152,7 +152,31 @@ main {
   color: var(--muted);
 }
 
-/* Grip handle + close button belong to the mobile bottom sheet only; hidden
+/* In-panel description editor (replaces the old modal dialog). */
+.detail-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* An author `display` beats the UA `[hidden]{display:none}`, so restore it. */
+.detail-editor[hidden] { display: none; }
+#detail-note-text {
+  width: 100%;
+  min-height: 140px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  padding: 10px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.detail-editor .note-actions button.secondary { background: var(--bg); }
+
+/* Grip handle + close button belong to the mobile bottom card only; hidden
    on desktop where the panel is a fixed floating column. */
 .detail-grip { display: none; }
 .detail-close { display: none; }
@@ -190,6 +214,8 @@ main {
     touch-action: pan-y;
   }
   .detail.open { transform: translateY(0); }
+  /* Editing needs more room for the textarea + on-screen keyboard. */
+  .detail.editing { max-height: 70vh; }
 
   /* Reserve room at the bottom of the outline while the card is open so the
      tree never stays hidden behind it — every node can be scrolled into view.
@@ -203,7 +229,9 @@ main {
   .detail-title { font-size: 0.98em; }
   .detail-body.markdown { font-size: 13px; }
 
-  /* Draggable pill at the top edge — the affordance that says "grab me". */
+  /* Draggable pill at the top edge — the affordance that says "grab me".
+     A wider transparent hit area makes it easy to grab; user-select/touch-action
+     off so dragging it moves the card instead of selecting text or scrolling. */
   .detail-grip {
     display: block;
     width: 36px;
@@ -212,6 +240,12 @@ main {
     border-radius: 3px;
     background: var(--guide);
     cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    padding: 8px 40px;
+    background-clip: content-box;
+    box-sizing: content-box;
   }
   .detail-close {
     display: inline-block;

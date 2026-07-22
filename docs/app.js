@@ -751,18 +751,6 @@ function readStoredDoc(key) {
   return null;
 }
 
-/** Remove every stored UMind key from localStorage (all projects + last-open).
- *  Used by the ?welcome URL flag to reset a stale copy in this browser. */
-function clearStoredProjects() {
-  try {
-    Object.keys(localStorage)
-      .filter((k) => k.startsWith('umind:')) // the app's whole namespace
-      .forEach((k) => localStorage.removeItem(k));
-  } catch (e) {
-    console.warn('Clearing stored projects failed:', e);
-  }
-}
-
 /* ---- Projects & export: New / Open / Save / Save As ----
    Persistence is automatic (localStorage, above). These actions manage the
    project name and EXPORT a .json file to the user's disk:
@@ -1120,13 +1108,14 @@ document
 // welcome map for first-time visitors, then render.
 storageOk = storageAvailable();
 
-// URL flag: ?welcome always (re)loads a fresh welcome map and wipes any stored
-// UMind projects in this browser — handy to preview welcome.js changes or to
-// reset a stale copy. The flag is then stripped from the address bar so a later
-// reload (e.g. after a Save As) does not wipe storage again.
+// URL flag: ?welcome (re)loads a fresh welcome map. It is non-destructive —
+// the welcome map is ephemeral (not persisted), so the visitor's saved
+// projects stay untouched and a plain reload returns to their work, which
+// makes ?welcome safe to link publicly (e.g. from the README). The flag is
+// stripped from the address bar so a later reload (e.g. after a Save As) does
+// not re-trigger it.
 const forceWelcome = new URLSearchParams(location.search).has('welcome');
 if (forceWelcome) {
-  if (storageOk) clearStoredProjects();
   try {
     const url = new URL(location.href);
     url.searchParams.delete('welcome');

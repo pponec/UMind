@@ -618,8 +618,14 @@ noteDialog.addEventListener('close', () => {
  * so note content can never inject markup.
  */
 
+const detailEl = document.getElementById('detail');
 const detailTitleEl = document.getElementById('detail-title');
 const detailBodyEl = document.getElementById('detail-body');
+
+// Mobile bottom sheet: which node's sheet the user manually dismissed. The
+// sheet stays closed for that node until focus moves elsewhere, so dismissing
+// it does not fight the auto-open on every re-render.
+let sheetDismissedForId = null;
 
 /** Refresh the right-hand panel to show the focused node's description. */
 function updateDetail() {
@@ -636,7 +642,37 @@ function updateDetail() {
       '<strong>Edit</strong> above or press <kbd>Alt</kbd>+<kbd>Enter</kbd>.</p>';
     detailBodyEl.classList.add('empty');
   }
+  // Clear a manual dismissal once focus leaves that node, so returning to it
+  // later shows the sheet again (the dismissal is only for the current node).
+  if (sheetDismissedForId !== currentId) sheetDismissedForId = null;
+  // On the mobile bottom sheet, reveal only when there is a note to read and
+  // the user has not just dismissed this node's sheet. On desktop the .open
+  // class is inert (the panel is always visible), so this is a no-op there.
+  detailEl.classList.toggle('open', !!note && sheetDismissedForId === null);
 }
+
+/** Hide the mobile bottom sheet and remember not to reopen it for this node. */
+function closeDetailSheet() {
+  sheetDismissedForId = currentId;
+  detailEl.classList.remove('open');
+}
+
+document.getElementById('detail-close').addEventListener('click', closeDetailSheet);
+
+// Swipe-down-to-dismiss on the bottom sheet. Only fires when the sheet is
+// scrolled to its top, so scrolling long note content is unaffected.
+let sheetTouchStartY = null;
+detailEl.addEventListener('touchstart', (e) => {
+  sheetTouchStartY = e.touches[0].clientY;
+}, { passive: true });
+detailEl.addEventListener('touchmove', (e) => {
+  if (sheetTouchStartY === null) return;
+  if (e.touches[0].clientY - sheetTouchStartY > 60 && detailEl.scrollTop <= 0) {
+    closeDetailSheet();
+    sheetTouchStartY = null;
+  }
+}, { passive: true });
+detailEl.addEventListener('touchend', () => { sheetTouchStartY = null; });
 
 /* ---------------------------------------------------------------------- */
 /* Persistence (Phase 0 stand-in for the server)                          */

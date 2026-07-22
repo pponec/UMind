@@ -157,52 +157,65 @@ main {
 .detail-grip { display: none; }
 .detail-close { display: none; }
 
-/* On narrow screens the detail panel becomes a bottom sheet: it slides up
-   over the outline only when the focused node has a note (JS toggles .open),
-   overlays instead of reflowing the tree, and is dismissed with a swipe down,
-   the ✕ button, or by focusing a note-less node. */
+/* On narrow screens the detail panel becomes a compact floating card near the
+   bottom of the screen. It shows only when the focused node has a note (JS
+   toggles .open). Crucially it does NOT permanently hide the tree: an equal
+   amount of bottom padding is reserved on the outline while it is open, so the
+   whole tree can scroll clear of the card, and JS scrolls the focused node
+   above it. Dismissed by swiping down, the ✕ button, or focusing a note-less
+   node. */
 @media (max-width: 760px) {
   .workspace { flex-direction: column; }
   .detail {
+    /* A short, inset card — not an edge-to-edge wall — so it reads as a small
+       floating note rather than a takeover of the screen. */
     width: auto;
     align-self: stretch;
-    /* Pin to the bottom edge, off-screen until opened. */
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
     z-index: 40;
     margin: 0;
-    max-height: 55vh;
+    max-height: 34vh;
     overflow: auto;
     border: 1px solid var(--border);
-    border-bottom: none;
-    border-radius: 14px 14px 0 0;
-    box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.22);
-    /* Hidden by default; .open slides it into view. Respect the home-bar
-       inset on phones so content is not clipped. */
-    transform: translateY(105%);
-    transition: transform 0.24s ease;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-    /* Let vertical swipes on the sheet be handled by our JS, not native scroll,
-       so a downward drag can dismiss it. */
+    border-radius: 12px;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.28);
+    /* Hidden below the screen until opened; the extra 16px clears the shadow. */
+    transform: translateY(calc(100% + 16px));
+    transition: transform 0.22s ease;
+    padding: 6px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+    /* Let vertical swipes on the card be handled by our JS (swipe to dismiss). */
     touch-action: pan-y;
   }
   .detail.open { transform: translateY(0); }
 
+  /* Reserve room at the bottom of the outline while the card is open so the
+     tree never stays hidden behind it — every node can be scrolled into view.
+     :has() lets a sibling react to the card's state without any JS. */
+  .workspace:has(.detail.open) main {
+    padding-bottom: calc(34vh + 28px);
+  }
+
+  /* Tighter internals on the small card. */
+  .detail-head { margin-bottom: 6px; }
+  .detail-title { font-size: 0.98em; }
+  .detail-body.markdown { font-size: 13px; }
+
   /* Draggable pill at the top edge — the affordance that says "grab me". */
   .detail-grip {
     display: block;
-    width: 40px;
-    height: 5px;
-    margin: 2px auto 10px;
+    width: 36px;
+    height: 4px;
+    margin: 0 auto 8px;
     border-radius: 3px;
     background: var(--guide);
     cursor: grab;
   }
   .detail-close {
     display: inline-block;
-    padding: 4px 8px;
+    padding: 2px 8px;
     line-height: 1;
     font-size: 15px;
   }

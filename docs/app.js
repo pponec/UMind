@@ -622,10 +622,14 @@ const detailEl = document.getElementById('detail');
 const detailTitleEl = document.getElementById('detail-title');
 const detailBodyEl = document.getElementById('detail-body');
 
-// Mobile bottom sheet: which node's sheet the user manually dismissed. The
-// sheet stays closed for that node until focus moves elsewhere, so dismissing
+// Mobile bottom card: which node's card the user manually dismissed. The
+// card stays closed for that node until focus moves elsewhere, so dismissing
 // it does not fight the auto-open on every re-render.
 let sheetDismissedForId = null;
+
+/** True when the viewport is narrow enough that the detail panel is the card. */
+const mobileSheetQuery = window.matchMedia('(max-width: 760px)');
+function isMobileSheet() { return mobileSheetQuery.matches; }
 
 /** Refresh the right-hand panel to show the focused node's description. */
 function updateDetail() {
@@ -645,10 +649,19 @@ function updateDetail() {
   // Clear a manual dismissal once focus leaves that node, so returning to it
   // later shows the sheet again (the dismissal is only for the current node).
   if (sheetDismissedForId !== currentId) sheetDismissedForId = null;
-  // On the mobile bottom sheet, reveal only when there is a note to read and
-  // the user has not just dismissed this node's sheet. On desktop the .open
+  // On the mobile bottom card, reveal only when there is a note to read and
+  // the user has not just dismissed this node's card. On desktop the .open
   // class is inert (the panel is always visible), so this is a no-op there.
-  detailEl.classList.toggle('open', !!note && sheetDismissedForId === null);
+  const wasOpen = detailEl.classList.contains('open');
+  const open = !!note && sheetDismissedForId === null;
+  detailEl.classList.toggle('open', open);
+  // When the card first appears on a phone, bring the focused node up so it is
+  // visible above the card (the card only covers the lower part of the screen).
+  if (open && !wasOpen && isMobileSheet()) {
+    const el = nodeEl(currentId);
+    if (el) requestAnimationFrame(
+      () => el.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+  }
 }
 
 /** Hide the mobile bottom sheet and remember not to reopen it for this node. */

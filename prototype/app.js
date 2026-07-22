@@ -575,101 +575,14 @@ noteDialog.addEventListener('close', () => {
 /* ---------------------------------------------------------------------- */
 
 /*
- * Intentionally minimal Markdown: headings, bold/italic, inline code, links,
- * unordered/ordered lists, blockquotes, paragraphs. A richer renderer from
- * the Ujorm library will replace this later. Input is HTML-escaped first, so
- * note text can never inject markup.
+ * Markdown rendering lives in markdown.js (a JS port of Ujorm's
+ * MarkdownToHtmlConverter), loaded before this file. It exposes the global
+ * renderMarkdown(md) \u2192 HTML string; the DOM-based renderer escapes all text,
+ * so note content can never inject markup.
  */
 
 const detailTitleEl = document.getElementById('detail-title');
 const detailBodyEl = document.getElementById('detail-body');
-
-function escapeHtml(s) {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;'); // keep quotes safe inside link href attributes
-}
-
-/** Apply inline Markdown to an already HTML-escaped line. */
-function renderInline(s) {
-  const codes = [];
-  // Protect `code` spans from bold/italic processing.
-  s = s.replace(/`([^`]+)`/g, (_, c) => {
-    codes.push(c);
-    return '\uE000' + (codes.length - 1) + '\uE000';
-  });
-  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  // Links: only http(s) targets are allowed by the pattern.
-  s = s.replace(
-    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
-  );
-  s = s.replace(/\uE000(\d+)\uE000/g, (_, i) => '<code>' + codes[+i] + '</code>');
-  return s;
-}
-
-/** Convert a Markdown string to a small, safe HTML subset. */
-function renderMarkdown(md) {
-  const lines = escapeHtml(md).split(/\n/);
-  let html = '';
-  let listType = null; // 'ul' | 'ol' | null
-  const para = [];
-
-  const closeList = () => {
-    if (listType) {
-      html += '</' + listType + '>';
-      listType = null;
-    }
-  };
-  const flushPara = () => {
-    if (para.length) {
-      html += '<p>' + renderInline(para.join(' ')) + '</p>';
-      para.length = 0;
-    }
-  };
-
-  for (const raw of lines) {
-    const line = raw.replace(/\s+$/, '');
-    let m;
-    if (line.trim() === '') {
-      flushPara();
-      closeList();
-    } else if ((m = line.match(/^(#{1,3})\s+(.*)$/))) {
-      flushPara();
-      closeList();
-      const lvl = m[1].length;
-      html += '<h' + lvl + '>' + renderInline(m[2]) + '</h' + lvl + '>';
-    } else if ((m = line.match(/^\s*>\s?(.*)$/))) {
-      flushPara();
-      closeList();
-      html += '<blockquote>' + renderInline(m[1]) + '</blockquote>';
-    } else if ((m = line.match(/^\s*[-*]\s+(.*)$/))) {
-      flushPara();
-      if (listType !== 'ul') {
-        closeList();
-        html += '<ul>';
-        listType = 'ul';
-      }
-      html += '<li>' + renderInline(m[1]) + '</li>';
-    } else if ((m = line.match(/^\s*\d+\.\s+(.*)$/))) {
-      flushPara();
-      if (listType !== 'ol') {
-        closeList();
-        html += '<ol>';
-        listType = 'ol';
-      }
-      html += '<li>' + renderInline(m[1]) + '</li>';
-    } else {
-      para.push(line);
-    }
-  }
-  flushPara();
-  closeList();
-  return html;
-}
 
 /** Refresh the right-hand panel to show the focused node's description. */
 function updateDetail() {
@@ -742,11 +655,12 @@ function loadDocFromText(text, source) {
 
 /* ---- localStorage auto-save ---- */
 
-// The file name is the unique project key. Each named project auto-saves under
-// its own key; an unnamed (New) document uses the scratch key. LAST_KEY records
+// localStorage is the continuous working store (like an online image editor:
+// your work is always kept in the browser). The project's name is the key
+// identifier — or 'untitled' when it has none yet. Save / Save As are a
+// separate concern: they EXPORT the project to a file on disk. LAST_KEY records
 // which project to restore on the next visit.
-const SCRATCH_KEY = 'umind:doc';
-const PROJECT_PREFIX = 'umind:file:';
+const PROJECT_PREFIX = 'umind:project:';
 const LAST_KEY = 'umind:last';
 let storageOk = false;
 let saveTimer = null;
@@ -763,9 +677,9 @@ function storageAvailable() {
   }
 }
 
-/** localStorage key for the active project (its file name, or the scratch key). */
+/** localStorage key for the active project (its name, or 'untitled'). */
 function activeStorageKey() {
-  return currentFileName ? PROJECT_PREFIX + currentFileName : SCRATCH_KEY;
+  return PROJECT_PREFIX + (currentFileName || 'untitled');
 }
 
 /** Persist the document to its project key immediately (used by Save). */
@@ -803,17 +717,30 @@ function readStoredDoc(key) {
   return null;
 }
 
-/* ---- Projects: New / Open / Save / Save As ----
-   The FILE NAME is the unique project key (currentFileName). New starts a
-   fresh unnamed project; Save As asks for a name (the OS dialog on Chromium,
-   otherwise a prompt) and binds it; Save writes back to that name; if there is
-   no name yet, Save falls through to Save As. When the File System Access API
-   is available the real .json file is written directly; otherwise the project
-   lives in localStorage under its name and Save As also downloads the file. */
+/* ---- Projects & export: New / Open / Save / Save As ----
+   Persistence is automatic (localStorage, above). These actions manage the
+   project name and EXPORT a .json file to the user's disk:
+     New     — start a fresh, unnamed project (kept in localStorage as untitled)
+     Save As — name the project (its identifier) and export a file
+     Save    — re-export using the current name; if unnamed, do Save As
+     Open    — load a .json file as the current project
+   Export uses the File System Access API when available (a real file on disk);
+   otherwise it downloads the file. Naming still works everywhere (it only
+   changes the localStorage key), even where disk export is blocked (sandbox). */
 
 const canFsAccess = 'showSaveFilePicker' in window; // secure context only
 let fileHandle = null; // real-file handle when available (null in fallback)
-let currentFileName = null; // the project's file name = its unique key
+let currentFileName = null; // the project's name / identifier (localStorage key)
+
+// Running inside a cross-origin iframe (e.g. the published artifact preview)?
+// There, disk export is blocked no matter what, so we say so honestly.
+const inIframe = (() => {
+  try {
+    return window.self !== window.top;
+  } catch (e) {
+    return true; // cross-origin access threw -> we are framed
+  }
+})();
 
 const FILE_TYPES = [
   { description: 'UMind map', accept: { 'application/json': ['.json'] } },
@@ -840,13 +767,10 @@ function updateFileLabel() {
   if (!fileNameEl) return;
   fileNameEl.textContent = currentFileName || '(unsaved)';
   fileNameEl.classList.toggle('unbound', !currentFileName);
-  fileNameEl.title = !currentFileName
-    ? 'Not saved yet — use Save As'
-    : fileHandle
-      ? 'Written to the file ' + currentFileName + ' on disk'
-      : currentFileName +
-        ' — stored in this browser. For a real file on disk, run locally in ' +
-        'Chrome (python3 run.py) and use Save As.';
+  fileNameEl.title = currentFileName
+    ? 'Project "' + currentFileName + '" — auto-saved in this browser. ' +
+      'Save / Save As export a .json file to disk.'
+    : 'Untitled — auto-saved in this browser. Use Save As to name and export it.';
 }
 
 async function writeHandle(handle, json) {
@@ -877,25 +801,24 @@ function askName(def) {
   });
 }
 
-/** Save to the current project file; if unnamed, behave like Save As. */
+/** Export the current project to disk under its name; if unnamed, do Save As. */
 async function saveFile() {
   if (!currentFileName) return saveFileAs();
-  persistProject(); // keep the in-browser copy current
+  const json = serialise();
   if (canFsAccess && fileHandle) {
     try {
-      await writeHandle(fileHandle, serialise());
-      setStatus('saved to file');
+      await writeHandle(fileHandle, json);
+      setStatus('exported to file');
       return;
     } catch (e) {
-      console.warn('File save failed:', e);
+      console.warn('Export failed:', e);
     }
   }
-  setStatus('saved in browser'); // no disk access here (e.g. sandbox/no FS API)
+  exportDownload(json, currentFileName);
 }
 
-/** Save As: name the project (its unique key) and write it out. */
+/** Save As: name the project (its identifier) and export a file. */
 async function saveFileAs() {
-  const json = serialise();
   let name = null;
   let handle = null;
 
@@ -908,7 +831,7 @@ async function saveFileAs() {
       name = handle.name;
     } catch (e) {
       if (e.name === 'AbortError') return; // user cancelled
-      console.warn('Save As picker failed, falling back to prompt:', e);
+      console.warn('Save As picker failed, falling back to a name dialog:', e);
     }
   }
   if (!name) {
@@ -920,28 +843,46 @@ async function saveFileAs() {
     if (!/\.json$/i.test(name)) name += '.json';
   }
 
-  currentFileName = name;
+  currentFileName = name; // the identifier (also the localStorage key)
   fileHandle = handle; // may be null (fallback)
-  persistProject();
+  persistProject(); // move the working copy to the new name's key immediately
   updateFileLabel();
+
+  const json = serialise();
   if (handle) {
     await writeHandle(handle, json);
-    setStatus('saved to file');
+    setStatus('exported to file');
   } else {
-    downloadJson(json, name); // real file in a normal browser; no-op in sandbox
-    setStatus('saved in browser');
+    exportDownload(json, name);
   }
 }
 
-/** Fallback save: trigger a browser download (works under file:// too). */
+/** Download a file and report honestly (blocked inside the artifact preview). */
+function exportDownload(json, name) {
+  if (inIframe) {
+    // Sandboxed preview: downloads are blocked. Don't pretend otherwise.
+    setStatus('open in a tab to export');
+    return;
+  }
+  downloadJson(json, name);
+  setStatus('downloaded');
+}
+
+/** Fallback export: trigger a browser download. The anchor must be in the DOM
+ *  (Firefox) and the object URL must be revoked *later* — revoking it right
+ *  after click() cancels the download in several browsers. */
 function downloadJson(json, name) {
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = name || 'untitled.json';
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 /** Open a file, switching to it as the current project. */
@@ -1132,7 +1073,7 @@ document
 storageOk = storageAvailable();
 if (storageOk) {
   const lastName = localStorage.getItem(LAST_KEY) || '';
-  const restored = readStoredDoc(lastName ? PROJECT_PREFIX + lastName : SCRATCH_KEY);
+  const restored = readStoredDoc(PROJECT_PREFIX + (lastName || 'untitled'));
   if (restored) {
     doc = ensureDocId(restored);
     currentFileName = lastName || null;

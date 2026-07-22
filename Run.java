@@ -1,5 +1,5 @@
 /*
- * Run the UMind Phase 0 prototype over http (so localStorage auto-save works).
+ * Run the UMind app over http (so localStorage auto-save works).
  *
  * A single-file Java 17 program — no build step, no *.class files. Run it with
  * the source-code launcher:
@@ -7,9 +7,10 @@
  *     java Run.java            # serve on http://localhost:8000/
  *     java Run.java 9000       # serve on a custom port
  *
- * It is the Java counterpart of run.py: it serves the prototype/ directory next
- * to this source file (works from any working directory), opens the page in the
- * default browser, and stops on Ctrl+C.
+ * It is the Java counterpart of run.py: it serves the docs/ directory next to
+ * this source file (the same files GitHub Pages publishes; works from any
+ * working directory), opens the page in the default browser, and stops on
+ * Ctrl+C.
  */
 
 import com.sun.net.httpserver.HttpExchange;
@@ -31,8 +32,8 @@ public class Run {
     private static final int DEFAULT_PORT = 8000;
 
     /**
-     * Parse arguments, locate the prototype directory, start the http server,
-     * open the browser and block until the JVM is stopped (Ctrl+C).
+     * Parse arguments, locate the web root, start the http server, open the
+     * browser and block until the JVM is stopped (Ctrl+C).
      */
     public static void main(String[] args) throws Exception {
         var port = DEFAULT_PORT;
@@ -45,9 +46,9 @@ public class Run {
             }
         }
 
-        var root = prototypeDir();
+        var root = webRoot();
         if (!Files.isRegularFile(root.resolve("index.html"))) {
-            System.err.println("prototype/index.html not found under " + root);
+            System.err.println("docs/index.html not found under " + root);
             System.exit(1);
         }
 
@@ -57,7 +58,7 @@ public class Run {
         server.start();
 
         var url = "http://localhost:" + port + "/";
-        System.out.println("UMind prototype: " + url + "  (serving " + root + ")");
+        System.out.println("UMind: " + url + "  (serving " + root + ")");
         System.out.println("Press Ctrl+C to stop.");
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -70,15 +71,16 @@ public class Run {
     }
 
     /**
-     * Resolve the prototype/ directory next to this source file, falling back to
-     * the current working directory when the source path is unknown.
+     * Resolve the web root: the docs/ directory next to this source file,
+     * falling back to docs/ under the current working directory when the source
+     * path is unknown.
      */
-    private static Path prototypeDir() {
+    private static Path webRoot() {
         var src = System.getProperty("jdk.launcher.sourcefile");
         var base = src != null
                 ? Path.of(src).toAbsolutePath().getParent()
                 : Path.of("").toAbsolutePath();
-        return base.resolve("prototype");
+        return base.resolve("docs");
     }
 
     /**

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Run the UMind Phase 0 prototype over http (so localStorage auto-save works).
+"""Run the UMind app over http (so localStorage auto-save works).
 
 Usage:
     python3 run.py            # serve on http://localhost:8000/
     python3 run.py 9000       # serve on a custom port
     ./run.py                  # after: chmod +x run.py
 
-Serves the prototype/ directory next to this script (works from any working
-directory) and opens the page in your default browser. Stop with Ctrl+C.
+Serves the docs/ directory next to this script (the same files GitHub Pages
+publishes; works from any working directory) and opens the page in your
+default browser. Stop with Ctrl+C.
 """
 
 import functools
@@ -28,9 +29,9 @@ def main() -> int:
             print(f"Invalid port: {sys.argv[1]!r}", file=sys.stderr)
             return 2
 
-    root = Path(__file__).resolve().parent / "prototype"
+    root = Path(__file__).resolve().parent / "docs"
     if not (root / "index.html").is_file():
-        print(f"prototype/index.html not found under {root}", file=sys.stderr)
+        print(f"docs/index.html not found under {root}", file=sys.stderr)
         return 1
 
     handler = functools.partial(
@@ -39,7 +40,7 @@ def main() -> int:
     url = f"http://localhost:{port}/"
 
     with http.server.ThreadingHTTPServer(("127.0.0.1", port), handler) as httpd:
-        print(f"UMind prototype: {url}  (serving {root})")
+        print(f"UMind: {url}  (serving {root})")
         print("Press Ctrl+C to stop.")
         try:
             webbrowser.open(url)

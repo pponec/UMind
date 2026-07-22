@@ -15,6 +15,30 @@ python3 run.py       # then open http://localhost:8000/
 
 No Python? `java Run.java` does the same (Java 17+, no build step). Details below.
 
+## Requirements
+
+Two independent things describe the frontend code:
+
+- **Approach — "vanilla" JavaScript.** This is *not* a version; it means plain
+  JS with **no framework and no library** (no React/Vue/jQuery), and here also
+  **no build step, no bundler, no polyfills, and no ES modules** — just classic
+  `<script src="…">` tags.
+- **Language version — ECMAScript 2017 (`ES2017`, a.k.a. `ES8`).** This is the
+  edition the code targets. The newest syntax used is `async/await` (ES2017);
+  there is no optional chaining, nullish coalescing, or other ES2020+ syntax.
+  (ECMAScript editions, for reference: ES6 = ES2015, ES8 = ES2017, ES11 =
+  ES2020.)
+
+So the accurate one-line label is **"vanilla JavaScript, ECMAScript 2017"** —
+the first says *how* it is written, the second says *which language version*.
+
+In practice the app is gated by two runtime features rather than by JS syntax:
+the CSS `:has()` selector (mobile detail card) and Pointer Events. So any
+**evergreen browser from late 2023** runs it — **Chrome/Edge 105+, Safari
+15.4+, Firefox 121+**. The optional disk **Save/Open** to a real file uses the
+File System Access API (Chromium only) and degrades gracefully to a
+download + file picker elsewhere.
+
 ## Running the app
 
 The app is a static frontend (`index.html`, `app.js`, `markdown.js`,

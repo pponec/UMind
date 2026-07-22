@@ -30,7 +30,7 @@
     children: [
       {
         text: 'Add & structure nodes ⌨️',
-        note: 'Every action is a keystroke on the *focused* node. Click a node to focus it, then try these:',
+        note: 'Every action is a keystroke on the **focused** node. Click a node to focus it, then try these:',
         children: [
           { text: 'Enter — new node below', note: '', children: [] },
           { text: 'Tab — indent (become a child of the node above)', note: '', children: [] },

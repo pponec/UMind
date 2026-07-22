@@ -522,7 +522,15 @@ outlineEl.addEventListener('click', (e) => {
   const mark = e.target.closest('.note-mark');
   if (mark) {
     const nodeDiv = mark.parentElement.querySelector('.node');
-    if (nodeDiv) openNoteDialog(nodeDiv.dataset.id);
+    if (nodeDiv) {
+      // Move focus to the marked row and mirror its note into the detail
+      // panel, then open the editor (matches focusing the node directly).
+      currentId = nodeDiv.dataset.id;
+      nodeDiv.focus();
+      placeCaret(nodeDiv, Infinity);
+      updateDetail();
+      openNoteDialog(currentId);
+    }
     return;
   }
 

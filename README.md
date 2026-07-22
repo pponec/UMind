@@ -97,3 +97,13 @@ The browser then requests `http://localhost:8000/images/logo.png`, which the
 launcher serves from `docs/images/`. The same relative reference keeps working
 after deployment, provided `docs/images/logo.png` is committed and published
 with the app.
+
+## Similar open-source projects
+
+Other lightweight, actively maintained, browser-based mind-map / outliner
+projects with an English UI that (like UMind) run fully offline and keep your
+data in a plain file:
+
+- **[Mind Elixir](https://github.com/SSShooter/mind-elixir-core)** — Framework-agnostic JavaScript/TypeScript mind-map core with a clean, fast UI; runs entirely in the browser, imports and exports the whole map as JSON, and also exports PNG/SVG. MIT.
+- **[Markmap](https://github.com/markmap/markmap)** — Turns plain Markdown into an interactive mind map (via D3.js) and can generate self-contained offline HTML files, so a single `.md` file stays the source of truth. MIT.
+- **[jsMind](https://github.com/hizzgdev/jsmind)** — Small, dependency-free JavaScript mind-map library that renders and edits in the browser (SVG/canvas) and loads/saves the map as JSON. BSD.

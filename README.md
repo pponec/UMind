@@ -1,6 +1,14 @@
 # UMind
 UMind — a minimalist, self-hosted mind-mapping app. Servlet-based Java backend, ujo-web HTML5 frontend, plain-JSON storage, no cloud lock-in.
 
+## Quick start
+
+```
+python3 run.py       # then open http://localhost:8000/
+```
+
+No Python? `java Run.java` does the same (Java 17+, no build step). Details below.
+
 ## Running the app
 
 The app is a static frontend (`index.html`, `app.js`, `markdown.js`,

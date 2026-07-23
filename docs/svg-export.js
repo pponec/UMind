@@ -437,12 +437,16 @@
 
   /** Column offsets per depth. Each column is pushed out far enough that even
    *  the widest box of the previous depth still leaves a readable connector,
-   *  so wide labels stretch the drawing instead of colliding. */
-  function columns(widths, depth) {
+   *  so wide labels stretch the drawing instead of colliding. The wide COL_MIN
+   *  floor exists only so a parent's hanging note bubble (width NOTE_W) clears
+   *  the child column; on a depth where no parent hangs a note (`hangDepths`)
+   *  that reservation is pure wasted gap, so there the column shrinks to the
+   *  LINK_MIN connector and the boxes sit close together. */
+  function columns(widths, depth, hangDepths) {
     const colX = [0];
     for (let d = 1; d <= depth; d++) {
       const prev = d === 1 ? (widths[0] || 0) / 2 : (widths[d - 1] || 0);
-      const min = COL_MIN[Math.min(d - 1, COL_MIN.length - 1)];
+      const min = hangDepths[d - 1] ? COL_MIN[Math.min(d - 1, COL_MIN.length - 1)] : 0;
       colX.push(colX[d - 1] + Math.max(min, prev + LINK_MIN));
     }
     return colX;
@@ -508,7 +512,20 @@
     right.forEach((b) => measure(b, 1, 1, widths));
     left.forEach((b) => measure(b, 1, -1, widths));
 
-    const colX = columns(widths, widths.length - 1);
+    // Which depths actually have a parent hanging a note bubble in its own
+    // column? Only those depths need the wide COL_MIN gap (see columns()). The
+    // root is excluded: its note sits centred in the free strip below it, not
+    // in a column gap, so it never needs a wider root->depth-1 column.
+    const hangDepths = [];
+    const scanHang = (node) => {
+      if (node._depth > 0 && node.children.length && node.note) {
+        hangDepths[node._depth] = true;
+      }
+      node.children.forEach(scanHang);
+    };
+    scanHang(root);
+
+    const colX = columns(widths, widths.length - 1, hangDepths);
     root._x = -root._w / 2;
     root._cx = 0;
     right.forEach((b) => assignX(b, colX));

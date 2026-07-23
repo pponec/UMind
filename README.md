@@ -43,9 +43,10 @@ download + file picker elsewhere.
 ## Running the app
 
 The app is a static frontend (`index.html`, `app.js`, `markdown.js`,
-`style.css`) that lives in **`docs/`**, so GitHub Pages publishes it as-is with
-the **Deploy from a branch → `/docs`** source (Settings → Pages). Serve it over
-http so that auto-save (localStorage) works reliably.
+`svg-export.js`, `style.css`) that lives in **`docs/`**, so GitHub Pages
+publishes it as-is with the **Deploy from a branch → `/docs`** source
+(Settings → Pages). Serve it over http so that auto-save (localStorage) works
+reliably.
 
 From the repository root, use one of the bundled launchers (they serve `docs/`
 and open the browser for you; both take an optional port, default `8000`):

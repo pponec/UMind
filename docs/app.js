@@ -1122,6 +1122,19 @@ function newFile() {
   setStatus('new project');
 }
 
+/** Export SVG: draw the map as a picture and show it in a new tab (see
+ *  svg-export.js). The picture is a snapshot — it is not linked to the
+ *  project file and nothing is written to disk unless the tab is blocked. */
+function exportSvgFile() {
+  try {
+    const name = suggestedFileName().replace(/\.json$/i, '') + '.svg';
+    setStatus(exportSvg(doc, name) ? 'svg opened in a new tab' : 'svg downloaded');
+  } catch (e) {
+    console.warn('SVG export failed:', e);
+    setStatus('svg export failed');
+  }
+}
+
 // Fallback file-input change handler (no File System Access API).
 fileInput.addEventListener('change', () => {
   const file = fileInput.files && fileInput.files[0];
@@ -1266,6 +1279,7 @@ document.getElementById('btn-new').addEventListener('click', newFile);
 document.getElementById('btn-open').addEventListener('click', openFile);
 document.getElementById('btn-save').addEventListener('click', saveFile);
 document.getElementById('btn-saveas').addEventListener('click', saveFileAs);
+document.getElementById('btn-svg').addEventListener('click', exportSvgFile);
 detailEditBtn.addEventListener('click', () => enterNoteEdit(currentId));
 
 // Clicking the toolbar logo opens it at full size; a click anywhere on the

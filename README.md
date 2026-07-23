@@ -172,16 +172,6 @@ exactly what GitHub Pages publishes (**Deploy from a branch → `/docs`**).
   `MarkdownToHtmlConverter` — and builds DOM nodes, so all text is escaped by
   construction.
 
-## Similar open-source projects
-
-Other lightweight, actively maintained, browser-based mind-map / outliner
-projects with an English UI that (like UMind) run fully offline and keep your
-data in a plain file:
-
-- **[Mind Elixir](https://github.com/SSShooter/mind-elixir-core)** — Framework-agnostic JavaScript/TypeScript mind-map core with a clean, fast UI; runs entirely in the browser, imports and exports the whole map as JSON, and also exports PNG/SVG. MIT.
-- **[Markmap](https://github.com/markmap/markmap)** — Turns plain Markdown into an interactive mind map (via D3.js) and can generate self-contained offline HTML files, so a single `.md` file stays the source of truth. MIT.
-- **[jsMind](https://github.com/hizzgdev/jsmind)** — Small, dependency-free JavaScript mind-map library that renders and edits in the browser (SVG/canvas) and loads/saves the map as JSON. BSD.
-
 ## Try the demo maps
 
 The [`docs/data/`](docs/data/) folder ships a set of ready-made **shared,
@@ -207,3 +197,13 @@ the naming rules.
 
 [Apache License 2.0](LICENSE) — free to use, modify and self-host, with an
 explicit patent grant.
+
+## Similar open-source projects
+
+Other lightweight, actively maintained, browser-based mind-map / outliner
+projects with an English UI that (like UMind) run fully offline and keep your
+data in a plain file:
+
+- **[Mind Elixir](https://github.com/SSShooter/mind-elixir-core)** — Framework-agnostic JavaScript/TypeScript mind-map core with a clean, fast UI; runs entirely in the browser, imports and exports the whole map as JSON, and also exports PNG/SVG. MIT.
+- **[Markmap](https://github.com/markmap/markmap)** — Turns plain Markdown into an interactive mind map (via D3.js) and can generate self-contained offline HTML files, so a single `.md` file stays the source of truth. MIT.
+- **[jsMind](https://github.com/hizzgdev/jsmind)** — Small, dependency-free JavaScript mind-map library that renders and edits in the browser (SVG/canvas) and loads/saves the map as JSON. BSD.

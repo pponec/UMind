@@ -40,12 +40,41 @@
       },
       {
         "id": "n_006",
+        "text": "Code wider than the bubble",
+        "note": "Real code is wider than a note bubble:\n\n```\nconst rect = { x: node.x + node.width + LEAD, y: node.y - height / 2, w: NOTE_W, h: height };\nif (bubbleOverlaps(rect, placed) && !sameSubtree(node, other)) {\n    shiftSubtree(node, hit.y + hit.height + NOTE_GAP - rect.y);   // slide the whole group down\n}\n```\n\nEvery line above is longer than the bubble is wide. None of it may be lost:\nthe block wraps and keeps its indentation.",
+        "collapsed": false,
+        "children": [
+          {
+            "id": "n_007",
+            "text": "Long lines in a leaf note",
+            "note": "Real code is wider than a note bubble:\n\n```\nconst rect = { x: node.x + node.width + LEAD, y: node.y - height / 2, w: NOTE_W, h: height };\nif (bubbleOverlaps(rect, placed) && !sameSubtree(node, other)) {\n    shiftSubtree(node, hit.y + hit.height + NOTE_GAP - rect.y);   // slide the whole group down\n}\n```\n\nEvery line above is longer than the bubble is wide. None of it may be lost:\nthe block wraps and keeps its indentation.",
+            "collapsed": false,
+            "children": []
+          },
+          {
+            "id": "n_008",
+            "text": "Words that cannot break",
+            "note": "Text can also carry things that have nowhere to break:\n\n- a URL: https://github.com/pponec/UMind/blob/main/docs/svg-export.js#L1-L20\n- an identifier: `documentToSvg_placeBubblesAndConnectorCorridors_v2`\n- a path: `/home/user/projects/umind/test/json/05-markdown-notes.json`\n\nThey wrap mid-word rather than sticking out of the bubble.",
+            "collapsed": false,
+            "children": []
+          },
+          {
+            "id": "n_009",
+            "text": "A table with many columns",
+            "note": "| Key | Action | Scope | Since | Note |\n|---|---|---|---|---|\n| `Enter` | new sibling | focused node | v1 | the workhorse |\n| `Alt+Enter` | description | focused node | v1 | opens the panel |",
+            "collapsed": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "n_010",
         "text": "Headings, quotes and rules",
         "note": "# A heading\n## A smaller heading\n\n> A block quote, followed by a list:\n\n1. first\n2. second\n3. third\n\n---\n\nA line ending with a backslash forces a hard break.\\\nLike this one.",
         "collapsed": false,
         "children": [
           {
-            "id": "n_007",
+            "id": "n_011",
             "text": "The same in a leaf note",
             "note": "# A heading\n## A smaller heading\n\n> A block quote, followed by a list:\n\n1. first\n2. second\n3. third\n\n---\n\nA line ending with a backslash forces a hard break.\\\nLike this one.",
             "collapsed": false,
@@ -54,27 +83,27 @@
         ]
       },
       {
-        "id": "n_008",
+        "id": "n_012",
         "text": "Characters that must be escaped",
         "note": "",
         "collapsed": false,
         "children": [
           {
-            "id": "n_009",
+            "id": "n_013",
             "text": "Angle brackets & ampersands",
             "note": "Raw `<script>`, a bare & ampersand, \"double\" and 'single' quotes, and an em-dash — all have to come out as text.",
             "collapsed": false,
             "children": []
           },
           {
-            "id": "n_010",
+            "id": "n_014",
             "text": "Emoji and accents 🌀",
             "note": "Příliš žluťoučký kůň úpěl ďábelské ódy — diacritics, ✅ emoji and ← arrows.",
             "collapsed": false,
             "children": []
           },
           {
-            "id": "n_011",
+            "id": "n_015",
             "text": "An empty note is no note",
             "note": "",
             "collapsed": false,

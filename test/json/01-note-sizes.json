@@ -121,24 +121,31 @@
             "note": "",
             "collapsed": false,
             "children": []
+          },
+          {
+            "id": "n_018",
+            "text": "Taller than any sensible limit",
+            "note": "A note with no upper bound on its height. Everything below has to be drawn — a picture that quietly drops the end of a description is worse than a tall picture.\n\n**Step 1.** Focus a node and press Alt+Enter to open its description.\n\n**Step 2.** Write as much as the node deserves; Markdown is welcome.\n\n**Step 3.** Press Ctrl+Enter to keep it, or Esc to throw it away.\n\n**Step 4.** The 🗒 marker appears after the node text.\n\n**Step 5.** Show graph draws the description next to its node.\n\n**Step 6.** The bubble is exactly as tall as the text needs.\n\n**Step 7.** Branches below it do not move — the bubble is in the gutter.\n\n**Step 8.** Save As writes the whole document to a .json file.",
+            "collapsed": false,
+            "children": []
           }
         ]
       },
       {
-        "id": "n_018",
+        "id": "n_019",
         "text": "Tall note on the branch itself",
         "note": "A note can be much taller than the node it belongs to:\n\n- keyboard editing\n- drag and drop\n- collapse and expand\n- Markdown descriptions\n- auto-save to the browser\n- JSON export and import\n- SVG picture of the whole map\n- no build step, no dependencies\n\nThe picture must stay compact anyway: this bubble sits in the gutter, so it may not push the branches below it downwards.",
         "collapsed": false,
         "children": [
           {
-            "id": "n_019",
+            "id": "n_020",
             "text": "Child one",
             "note": "",
             "collapsed": false,
             "children": []
           },
           {
-            "id": "n_020",
+            "id": "n_021",
             "text": "Child two",
             "note": "",
             "collapsed": false,

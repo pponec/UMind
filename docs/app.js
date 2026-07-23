@@ -1209,6 +1209,7 @@ function exportSvgFile() {
 /** Render the picture into the page and switch the toolbar to viewing mode. */
 function showGraph() {
   graphView = true; // already true when the address asked for it (see boot)
+  document.body.classList.add('graph-view'); // slims the toolbar down to a strip
   document.querySelector('.workspace').hidden = true;
   document.querySelector('.help').hidden = true;
   document.getElementById('graph').hidden = false;
@@ -1223,10 +1224,6 @@ function showGraph() {
   document.getElementById('graph-canvas').innerHTML =
     svg.replace(/^<\?xml[^>]*\?>\s*/, '');
   document.title = (doc.root.text || 'UMind').trim() + ' — graph';
-  fileNameEl.textContent = projectLabel();   // the map being viewed, not "(unsaved)"
-  fileNameEl.classList.remove('unbound');
-  fileNameEl.title = 'Project shown in this picture';
-  setStatus('graph');
 }
 
 /** Back to the editor: the same address without the "/svg" tail. */

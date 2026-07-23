@@ -515,18 +515,19 @@ kbd {
    "Edit map". The sheet is shown at its natural size and scrolls; it is wider
    than any window on all but the smallest maps. */
 .graph {
-  padding: 18px 20px 40px;
+  padding: 0;
   overflow-x: auto;          /* the sheet scrolls, the page body never does */
+  background: #ffffff;       /* the picture is always light, whatever the theme */
 }
 /* An author `display` beats the UA `[hidden]{display:none}`, so restore it —
    the graph view hides the editor with the attribute (cf. .detail-editor). */
 .workspace[hidden], .help[hidden] { display: none; }
-.graph-canvas {
-  display: inline-block;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #ffffff;       /* the picture is always light, so is its frame */
-  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
-  line-height: 0;            /* no stray baseline gap under the <svg> */
-}
+.graph-canvas { display: inline-block; line-height: 0; }
 .graph-canvas svg { display: block; max-width: none; }
+/* The picture carries its own name, logo and date in the bottom-right corner,
+   so the page around it is only a strip of navigation. */
+body.graph-view .toolbar { padding: 5px 14px; gap: 8px; }
+body.graph-view .brand-logo,
+body.graph-view .brand,
+body.graph-view .file-name,
+body.graph-view .status { display: none; }

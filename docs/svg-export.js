@@ -66,14 +66,17 @@
   const FAN_SLICES = 6;      // pieces a connector is reserved in (see fanRects)
   const DOGEAR = 14;         // folded-corner size (always the top-right corner)
 
-  // Sheet header, echoing the app's toolbar: the wordmark on the left, the
-  // project — its localStorage name — on the right. Text only and no logo
-  // bitmap: the file stays small and self-contained, and the branding proper
-  // belongs to the page that hosts the picture (graph view in index.html).
-  const BRAND_SIZE = 19;     // wordmark font size
-  const META_SIZE = 13;      // project-name font size
-  const HEAD_H = 26;         // height of the header line itself
-  const HEAD_GAP = 20;       // space between the header rule and the drawing
+  // Sheet footer, in the bottom-right corner: logo, wordmark, the project (its
+  // localStorage name) and the export date. It sits at the end of the sheet so
+  // it never competes with the page hosting the picture, and it is what tells
+  // a saved or forwarded file what it is and when it was made.
+  const BRAND_SIZE = 17;     // wordmark font size
+  const META_SIZE = 12.5;    // project / date font size
+  const FOOT_H = 26;         // height of the footer line
+  const FOOT_GAP = 18;       // space between the drawing and the footer rule
+  const LOGO_PX = 20;        // drawn logo size
+  const LOGO_RASTER = 36;    // pixels it is rasterised at, for zoom and print
+  const LOGO_SRC = 'images/umind-logo.png';
 
   // Light palette — deliberately independent of the app theme.
   const C = {
@@ -602,35 +605,81 @@
     );
   }
 
-  /**
-   * The sheet header: "UMind" on the left, the project's localStorage name on
-   * the right, and a hairline under both. It identifies the picture once it
-   * has been saved or sent somewhere on its own.
-   */
-  function headerSvg(project, width) {
-    const y = PAD + HEAD_H * 0.75;                 // baseline of both labels
-    const rule = PAD + HEAD_H + HEAD_GAP / 2;
-    const parts = [
-      `<text x="${PAD}" y="${r(y)}" fill="${C.rootFill}" font-family="${esc(FONT_STACK)}" ` +
-      `font-size="${BRAND_SIZE}" font-weight="700">UMind</text>`,
-      `<path d="M${PAD},${r(rule)} H${r(width - PAD)}" stroke="${C.headRule}" stroke-width="1"/>`,
-    ];
-    if (project) {
-      // Kept next to the wordmark rather than out at the right edge: these
-      // sheets are wide, and a label alone in the far corner reads as unrelated.
-      const x = PAD + textWidth('UMind', { weight: 700, size: BRAND_SIZE }) + 12;
-      parts.push(
-        `<text x="${r(x)}" y="${r(y)}" fill="${C.meta}" ` +
-        `font-family="${esc(FONT_STACK)}" font-size="${META_SIZE}">· ${esc(project)}</text>`);
+  /* ---- Sheet footer: logo, wordmark, project, date ---- */
+
+  // The logo is rasterised from the app's own file, so images/umind-logo.png
+  // stays the single source of truth. Loading starts here and is long finished
+  // by the time anyone clicks; if it is not (or the canvas is tainted, as under
+  // file://), the footer simply carries no picture. The 1 MB original is never
+  // embedded — it is drawn small and re-encoded.
+  let logoUri = null;
+  (function loadLogo() {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const c = document.createElement('canvas');
+          c.width = c.height = LOGO_RASTER;
+          c.getContext('2d').drawImage(img, 0, 0, LOGO_RASTER, LOGO_RASTER);
+          logoUri = c.toDataURL('image/png');
+        } catch (e) {
+          logoUri = null; // tainted canvas: keep the text-only footer
+        }
+      };
+      img.src = LOGO_SRC;
+    } catch (e) {
+      logoUri = null;
     }
-    return parts.join('\n');
+  })();
+
+  /** Today as yyyy-MM-dd, in the exporter's own timezone (not UTC). */
+  function isoDate() {
+    const d = new Date();
+    const pad2 = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
   }
 
-  /** Width the header needs, so a small map is not narrower than its own title. */
-  function headerWidth(project) {
-    const brand = textWidth('UMind', { weight: 700, size: BRAND_SIZE });
-    const meta = project ? textWidth('· ' + project, { weight: 400, size: META_SIZE }) : 0;
-    return 2 * PAD + brand + (meta ? meta + 12 : 0);
+  /** The footer's caption: project and date, whichever of them exist. */
+  function footerMeta(project) {
+    return [project, isoDate()].filter(Boolean).join('  ·  ');
+  }
+
+  /** How wide the footer is, so a small map is not narrower than its own credit. */
+  function footerWidth(project) {
+    const logo = logoUri ? LOGO_PX + 10 : 0;
+    return 2 * PAD + logo
+      + textWidth('UMind', { weight: 700, size: BRAND_SIZE }) + 10
+      + textWidth(footerMeta(project), { weight: 400, size: META_SIZE });
+  }
+
+  /**
+   * The footer, aligned to the bottom-right corner: logo, "UMind", the
+   * project's localStorage name and the export date, over a hairline.
+   */
+  function footerSvg(project, width, height) {
+    const meta = footerMeta(project);
+    const metaW = textWidth(meta, { weight: 400, size: META_SIZE });
+    const brandW = textWidth('UMind', { weight: 700, size: BRAND_SIZE });
+    const logoW = logoUri ? LOGO_PX + 10 : 0;
+    const right = width - PAD;
+    const top = height - PAD - FOOT_H;             // top of the footer band
+    const mid = top + FOOT_H / 2;                  // its centre line
+    const brandX = right - metaW - 10 - brandW;
+    const parts = [
+      `<path d="M${PAD},${r(top - FOOT_GAP / 2)} H${r(right)}" stroke="${C.headRule}" ` +
+      `stroke-width="1"/>`,
+      `<text x="${r(brandX)}" y="${r(mid)}" dominant-baseline="central" fill="${C.rootFill}" ` +
+      `font-family="${esc(FONT_STACK)}" font-size="${BRAND_SIZE}" font-weight="700">UMind</text>`,
+      `<text x="${r(right)}" y="${r(mid)}" text-anchor="end" dominant-baseline="central" ` +
+      `fill="${C.meta}" font-family="${esc(FONT_STACK)}" font-size="${META_SIZE}">` +
+      `${esc(meta)}</text>`,
+    ];
+    if (logoUri) {
+      parts.push(
+        `<image x="${r(brandX - logoW)}" y="${r(mid - LOGO_PX / 2)}" width="${LOGO_PX}" ` +
+        `height="${LOGO_PX}" href="${logoUri}"/>`);
+    }
+    return parts.join('\n');
   }
 
   /**
@@ -656,11 +705,11 @@
       grow(b.rect.x, b.rect.y, b.rect.x + b.rect.w, b.rect.y + b.rect.h);
     });
 
-    const top = PAD + HEAD_H + HEAD_GAP;           // first row below the header
-    const width = Math.max(Math.ceil(maxX - minX + 2 * PAD), Math.ceil(headerWidth(project)));
-    const height = Math.ceil(maxY - minY + top + PAD);
-    const dx = (width - (maxX - minX)) / 2 - minX; // centre a map narrower than the header
-    const dy = top - minY;
+    const foot = FOOT_GAP + FOOT_H;                // band reserved at the bottom
+    const width = Math.max(Math.ceil(maxX - minX + 2 * PAD), Math.ceil(footerWidth(project)));
+    const height = Math.ceil(maxY - minY + 2 * PAD + foot);
+    const dx = (width - (maxX - minX)) / 2 - minX; // centre a map narrower than the footer
+    const dy = PAD - minY;
 
     const parts = [];
     parts.push(
@@ -673,7 +722,7 @@
     // text and CDATA means nothing — leaves valid CSS either way.
     parts.push(`<style>/* <![CDATA[ */${NOTE_CSS}/* ]]> */</style>`);
     parts.push(`<rect width="${width}" height="${height}" fill="${C.bg}"/>`);
-    parts.push(headerSvg(project, width));
+    parts.push(footerSvg(project, width, height));
     parts.push(`<g transform="translate(${r(dx)},${r(dy)})">`);
 
     parts.push(`<g fill="none" stroke="${C.link}" stroke-width="2" stroke-linecap="round">`);

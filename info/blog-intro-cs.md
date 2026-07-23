@@ -30,6 +30,8 @@ neregistruje: žádný účet, žádné heslo, žádný potvrzovací e-mail, nic
 Data se průběžně ukládají v prohlížeči a
 tlačítka *Save* / *Open* je lze přenést do lokálních textových souborů typu `.json`, které je pak možné přenést na jiný počítač.
 
+Pokud snad nemáte připojení k internetu, aplikaci lze pustit i lokálně. V projektu apliakce UMidn si můžete vybrat jeden ze dovu skritů pro lokální spuštění. Pro jeden potřebujete Python (v3), pro Javu (v17+).
+
 Pro vytváření dat se zde preferovaná klávesnice. 
 Sourozence uzlu tedy vytvoříe klávesou<kbd>Enter</kbd> a pro zanoření do hloubky se použije klávesa  <kbd>Tab</kbd>.
 Pro posun zpět na vysší úroveň se použije klávesa <kbd>Shift</kbd>+<kbd>Tab</kbd> a dialog pro detailní popis aktuáilně vybraného aktivujeme klávesami  <kbd>Alt</kbd>+<kbd>Enter</kbd>. 

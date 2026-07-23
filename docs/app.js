@@ -56,10 +56,11 @@ function newDocument() {
 
 /** Ensure a loaded document has a project id (older files may lack one) and
  *  drop the file header — it describes the export, not the map, and is written
- *  fresh on every save. */
+ *  fresh on every save. Both the current `meta` key and the legacy `generator`
+ *  are removed, so files written before the rename still load cleanly. */
 function ensureDocId(d) {
   if (d && !d.id) d.id = genMapId();
-  if (d) delete d.generator;
+  if (d) { delete d.meta; delete d.generator; }
   return d;
 }
 
@@ -843,12 +844,19 @@ function exportStamp() {
     + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
 }
 
-/** The file's header: what wrote it, in which version, where its reader lives
- *  and when it was written. JSON has no comments, so it is data — a block a
- *  human reads first and a loader ignores. It is rebuilt on every save, so a
- *  file never carries the stamp of the app that wrote its previous version. */
-function generatorHeader() {
-  return { app: APP_NAME, version: APP_VERSION, home: APP_HOME, exported: exportStamp() };
+/** The file's header: what wrote it, in which version, where its reader lives,
+ *  which project it is (its localStorage name) and when it was written. JSON
+ *  has no comments, so it is data — a block a human reads first and a loader
+ *  ignores. It is rebuilt on every save, so a file never carries the stamp of
+ *  the app that wrote its previous version. Named `meta` rather than the older
+ *  `generator`, because it now also carries the project name, which describes
+ *  the document, not the tool that produced it. `project` is omitted while the
+ *  map is still unnamed (a fresh untitled doc, or the ephemeral welcome map). */
+function fileMeta() {
+  const m = { app: APP_NAME, version: APP_VERSION, home: APP_HOME };
+  if (currentFileName) m.project = currentFileName;
+  m.exported = exportStamp();
+  return m;
 }
 
 /** Serialise the document, trimming node text (§5: trim on serialisation). */
@@ -862,7 +870,7 @@ function serialise() {
   });
   return JSON.stringify(
     {
-      generator: generatorHeader(),
+      meta: fileMeta(),
       version: doc.version,
       id: doc.id,
       rootId: doc.rootId,

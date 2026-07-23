@@ -8,7 +8,9 @@
  * short interactive guide. It is plain data — a nested tree of
  * { text, note, children } — that app.js turns into a real document (assigning
  * node ids). `note` is an optional Markdown description shown in the right-hand
- * panel; nodes that have one display a 🗒 marker.
+ * panel; nodes that have one display a 🗒 marker. Text and notes may use the
+ * placeholders {{app}}, {{version}} and {{home}}; app.js fills them in while
+ * building the document, because this file is loaded before the constants exist.
  *
  * This starter is ephemeral: app.js marks it with a non-serialised `isWelcome`
  * flag so it is never auto-saved, and it re-seeds fresh from this file on every
@@ -26,7 +28,8 @@
       'editable nodes.\n\n' +
       'This is a starter map. Explore the branches below, then press **New** ' +
       'for a blank project or **Open** to load a saved `.json` file. ' +
-      'Everything here is editable — delete these nodes whenever you are ready.',
+      'Everything here is editable — delete these nodes whenever you are ready.\n\n' +
+      '_You are running {{app}} {{version}}._',
     children: [
       {
         text: 'Add & structure nodes ⌨️',
@@ -89,8 +92,8 @@
           '- **Open** — load a `.json` file back\n' +
           '- **New** — start a fresh, empty project\n\n' +
           'Want this guide back? Open [?welcome](?welcome) ' +
-          '(e.g. `http://localhost:8000/?welcome`) — it reloads this welcome ' +
-          'page and clears the maps saved in this browser.',
+          '(e.g. `http://localhost:8000/?welcome`) — it shows this guide again ' +
+          'and leaves your own maps untouched.',
         children: [],
       },
       {

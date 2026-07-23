@@ -11,6 +11,16 @@
 'use strict';
 
 /* ---------------------------------------------------------------------- */
+/* Application identity                                                   */
+/* ---------------------------------------------------------------------- */
+
+// Stamped into every exported document (see serialise). Bump APP_VERSION when
+// the released app changes; APP_HOME is where a stray file can find its reader.
+const APP_NAME = 'UMind';
+const APP_VERSION = '1.0.0';
+const APP_HOME = 'https://pponec.github.io/UMind/';
+
+/* ---------------------------------------------------------------------- */
 /* Data model                                                             */
 /* ---------------------------------------------------------------------- */
 
@@ -44,18 +54,31 @@ function newDocument() {
   return wrapDocument(makeNode('Untitled'));
 }
 
-/** Ensure a loaded document has a project id (older files may lack one). */
+/** Ensure a loaded document has a project id (older files may lack one) and
+ *  drop the file header — it describes the export, not the map, and is written
+ *  fresh on every save. */
 function ensureDocId(d) {
   if (d && !d.id) d.id = genMapId();
+  if (d) delete d.generator;
   return d;
+}
+
+/** Fill the placeholders a data file may use for the running app's identity:
+ *  {{app}}, {{version}}, {{home}}. welcome.js is loaded before app.js, so it
+ *  cannot read the constants directly — it writes the placeholder instead. */
+function fillAppPlaceholders(text) {
+  return text
+    .replace(/\{\{app\}\}/g, APP_NAME)
+    .replace(/\{\{version\}\}/g, APP_VERSION)
+    .replace(/\{\{home\}\}/g, APP_HOME);
 }
 
 /** Build a document from a plain { text, note, children } tree spec (see
  *  welcome.js). Node ids are assigned here so the data file stays id-free. */
 function buildDocFromTree(spec) {
   const build = (n) => {
-    const node = makeNode(n.text || '');
-    node.note = n.note || '';
+    const node = makeNode(fillAppPlaceholders(n.text || ''));
+    node.note = fillAppPlaceholders(n.note || '');
     node.collapsed = Boolean(n.collapsed);
     node.children = (n.children || []).map(build);
     return node;
@@ -812,6 +835,22 @@ detailGrip.addEventListener('pointerup', () => {
 /*      download and a file picker.                                        */
 /* ---------------------------------------------------------------------- */
 
+/** Now as "yyyy-MM-DD HH:mm" in the exporter's own timezone (not UTC). */
+function exportStamp() {
+  const d = new Date();
+  const pad2 = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate())
+    + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
+
+/** The file's header: what wrote it, in which version, where its reader lives
+ *  and when it was written. JSON has no comments, so it is data — a block a
+ *  human reads first and a loader ignores. It is rebuilt on every save, so a
+ *  file never carries the stamp of the app that wrote its previous version. */
+function generatorHeader() {
+  return { app: APP_NAME, version: APP_VERSION, home: APP_HOME, exported: exportStamp() };
+}
+
 /** Serialise the document, trimming node text (§5: trim on serialisation). */
 function serialise() {
   const trimTree = (node) => ({
@@ -822,7 +861,13 @@ function serialise() {
     children: node.children.map(trimTree),
   });
   return JSON.stringify(
-    { version: doc.version, id: doc.id, rootId: doc.rootId, root: trimTree(doc.root) },
+    {
+      generator: generatorHeader(),
+      version: doc.version,
+      id: doc.id,
+      rootId: doc.rootId,
+      root: trimTree(doc.root),
+    },
     null,
     2,
   );

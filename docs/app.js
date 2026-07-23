@@ -1334,7 +1334,10 @@ async function showGraph() {
   document.querySelector('.help').hidden = true;
   document.getElementById('graph').hidden = false;
   document.title = (doc.root.text || 'UMind').trim() + ' — graph';
-  await whenLogoReady();
+  // Wait for the footer logo and for any images in the notes: the layout
+  // measures note height synchronously, so an image that has not loaded yet
+  // would be reserved no space and then clipped.
+  await Promise.all([whenLogoReady(), whenNotesReady(doc)]);
   // The prolog belongs to a standalone file; here the markup is inlined.
   document.getElementById('graph-canvas').innerHTML =
     currentSvg().replace(/^<\?xml[^>]*\?>\s*/, '');
@@ -1356,7 +1359,7 @@ function leaveGraph() {
  *  it can wait for the logo rather than sign the sheet without it. */
 async function downloadSvgFile() {
   try {
-    await whenLogoReady();
+    await Promise.all([whenLogoReady(), whenNotesReady(doc)]);
     downloadBlob(currentSvg(), SVG_TYPE, slugify(doc.root.text) + '.svg');
     setStatus('svg downloaded');
   } catch (e) {

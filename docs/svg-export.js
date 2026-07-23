@@ -123,7 +123,7 @@
 .umnote pre code { background: none; padding: 0; }
 .umnote blockquote { padding-left: 8px; border-left: 2px solid #e0cf8a; }
 .umnote a { color: #2563eb; }
-.umnote img { max-width: 100%; }
+.umnote img { max-width: 100%; height: auto; }
 .umnote table { border-collapse: collapse; font-size: 10.5px; max-width: 100%; }
 .umnote th, .umnote td { border: 1px solid #e0cf8a; padding: 1px 4px;
   overflow-wrap: anywhere; }
@@ -192,6 +192,45 @@
     }
   }
 
+  // Intrinsic size of every note image, learned by preloading it. measureNotes()
+  // reads offsetHeight synchronously, long before an <img> would decode, so a
+  // note image is otherwise measured at height 0 and the <foreignObject> clips
+  // it. With width/height attributes carrying the real ratio (set in buildNote),
+  // the browser reserves the scaled box up front — but only once the size is
+  // known, which is why callers await whenNotesReady() before drawing.
+  const noteImgSize = new Map(); // absolute url -> {w, h}, or null when it failed
+
+  /** Preload one image and cache its intrinsic size; never rejects. */
+  function loadImgSize(url) {
+    if (noteImgSize.has(url)) return Promise.resolve();
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        noteImgSize.set(url, { w: img.naturalWidth, h: img.naturalHeight });
+        resolve();
+      };
+      img.onerror = () => { noteImgSize.set(url, null); resolve(); };
+      img.src = url;
+    });
+  }
+
+  /** Absolute URLs of every Markdown image in a note tree (for preloading). */
+  function noteImageUrls(node, out) {
+    if (node.note) {
+      const re = /!\[[^\]]*\]\(\s*([^)\s]+)/g;
+      let m;
+      while ((m = re.exec(node.note))) out.push(absolute(m[1]));
+    }
+    node.children.forEach((k) => noteImageUrls(k, out));
+    return out;
+  }
+
+  /** Resolves once every note image is loaded (or has failed), so the following
+   *  synchronous measureNotes() can reserve the right height. Never rejects. */
+  function whenNotesReady(doc) {
+    return Promise.all(noteImageUrls(doc.root, []).map(loadImgSize));
+  }
+
   /**
    * Render one note to XHTML and measure the height it needs at NOTE_W.
    * The markup is produced with XMLSerializer (not innerHTML) because the
@@ -207,7 +246,17 @@
     const body = document.createElement('div');
     global.renderMarkdownInto(body, markdown);
     body.querySelectorAll('img[src]').forEach((el) => {
-      el.setAttribute('src', absolute(el.getAttribute('src')));
+      const url = absolute(el.getAttribute('src'));
+      el.setAttribute('src', url);
+      // Width/height attributes give the browser the aspect ratio up front, so
+      // the box is reserved before the image decodes (see noteImgSize). With
+      // `max-width:100%;height:auto` the height still scales when the bubble is
+      // narrower than the image.
+      const size = noteImgSize.get(url);
+      if (size) {
+        el.setAttribute('width', size.w);
+        el.setAttribute('height', size.h);
+      }
     });
     body.querySelectorAll('a[href]').forEach((el) => {
       el.setAttribute('href', absolute(el.getAttribute('href')));
@@ -790,5 +839,6 @@
 
   global.documentToSvg = documentToSvg;
   global.whenLogoReady = whenLogoReady;
+  global.whenNotesReady = whenNotesReady;
 
 })(window);

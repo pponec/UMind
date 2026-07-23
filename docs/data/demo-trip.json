@@ -24,7 +24,7 @@
           {
             "id": "n_003",
             "text": "Book the train early",
-            "note": "Tickets open **90 days** ahead and the cheap fare sells out first.",
+            "note": "Tickets open **90 days** ahead and the cheap fare sells out first.\n\n![Train ticket — Central to Old town, one way, €29](data/train-ticket.png)",
             "collapsed": false,
             "children": []
           },

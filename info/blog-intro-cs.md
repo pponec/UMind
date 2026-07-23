@@ -12,7 +12,9 @@ nahraďte adresami, které dev.to vrátí.
 Doporučené štítky: #showdev #javascript #productivity #opensource
 -->
 
-# UMind: lehká aplikace na myšlenkové mapy, ukázaná na plánování výletu
+<div style="margin-top: 10px; margin-left: 10px; width: 800px;">
+
+# UMind: lehká aplikace myšlenkové mapy na příkladu plánování výletu
 
 Myšlenková mapa je vizuální nástroj pro uspořádání myšlenek, plánování i efektivnější
 učení: místo zdlouhavého psaní textu využívá stromovou strukturu. Všechno začíná
@@ -99,8 +101,7 @@ Konečným cílem však není graf myšlenkové mapy, ale rozhodnutí. UMind je 
 na této myšlence: osnova je místo, kde se přemýšlí, obrázek je to, co se předává, a obojí
 jsou soubory, které vlastníte. Žádný účet, který je potřeba založit, žádná služba,
 které je potřeba věřit, nic k instalaci a nic, co přestane fungovat, až nějaká
-firma změní plány. Náš smyšlený výlet mimochodem dopadl výborně a v sobotu pršelo přesně
-tak, jak to mapa předpovídala.
+firma změní plány.
 
 Pokud si to chcete zkusit, průvodní uvítací mapa je na adrese
 [pponec.github.io/UMind/?welcome](https://pponec.github.io/UMind/?welcome) a
@@ -109,3 +110,5 @@ zdrojový kód — čistý JavaScript, žádný framework, žádný build, licen
 
 A zajímá mě druhá polovina příběhu: kde právě teď bydlí ten váš rozdělaný plán —
 v aplikaci, v textovém souboru, nebo v konverzaci, kterou pořád rolujete zpátky?
+
+</div>

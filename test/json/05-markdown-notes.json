@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "id": "m_test05",
+  "rootId": "n_root",
+  "root": {
+    "id": "n_root",
+    "text": "Markdown in notes",
+    "note": "Notes are rendered as **Markdown** inside the picture, so headings, lists, tables and code have to survive the trip into the SVG.",
+    "collapsed": false,
+    "children": [
+      {
+        "id": "n_002",
+        "text": "Tables",
+        "note": "Notes render **Markdown**:\n\n| Key | Action |\n|---|---|\n| `Enter` | new sibling |\n| `Tab` | indent |\n| `Alt+Enter` | description |",
+        "collapsed": false,
+        "children": [
+          {
+            "id": "n_003",
+            "text": "A table in a leaf note",
+            "note": "Notes render **Markdown**:\n\n| Key | Action |\n|---|---|\n| `Enter` | new sibling |\n| `Tab` | indent |\n| `Alt+Enter` | description |",
+            "collapsed": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "n_004",
+        "text": "Code and links",
+        "note": "A fenced code block keeps its spacing:\n\n```\nfunction renderMarkdown(md) {\n  return html;   // 5 < 6 && \"quoted\"\n}\n```\n\nInline `code`, **bold**, _italic_ and a [link](https://github.com/pponec/UMind).",
+        "collapsed": false,
+        "children": [
+          {
+            "id": "n_005",
+            "text": "A code block in a leaf note",
+            "note": "A fenced code block keeps its spacing:\n\n```\nfunction renderMarkdown(md) {\n  return html;   // 5 < 6 && \"quoted\"\n}\n```\n\nInline `code`, **bold**, _italic_ and a [link](https://github.com/pponec/UMind).",
+            "collapsed": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "n_006",
+        "text": "Headings, quotes and rules",
+        "note": "# A heading\n## A smaller heading\n\n> A block quote, followed by a list:\n\n1. first\n2. second\n3. third\n\n---\n\nA line ending with a backslash forces a hard break.\\\nLike this one.",
+        "collapsed": false,
+        "children": [
+          {
+            "id": "n_007",
+            "text": "The same in a leaf note",
+            "note": "# A heading\n## A smaller heading\n\n> A block quote, followed by a list:\n\n1. first\n2. second\n3. third\n\n---\n\nA line ending with a backslash forces a hard break.\\\nLike this one.",
+            "collapsed": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "n_008",
+        "text": "Characters that must be escaped",
+        "note": "",
+        "collapsed": false,
+        "children": [
+          {
+            "id": "n_009",
+            "text": "Angle brackets & ampersands",
+            "note": "Raw `<script>`, a bare & ampersand, \"double\" and 'single' quotes, and an em-dash — all have to come out as text.",
+            "collapsed": false,
+            "children": []
+          },
+          {
+            "id": "n_010",
+            "text": "Emoji and accents 🌀",
+            "note": "Příliš žluťoučký kůň úpěl ďábelské ódy — diacritics, ✅ emoji and ← arrows.",
+            "collapsed": false,
+            "children": []
+          },
+          {
+            "id": "n_011",
+            "text": "An empty note is no note",
+            "note": "",
+            "collapsed": false,
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

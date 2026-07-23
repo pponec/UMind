@@ -1122,7 +1122,7 @@ function newFile() {
   setStatus('new project');
 }
 
-/** Export SVG: draw the map as a picture and show it in a new tab (see
+/** Show graph: draw the map as an SVG picture and open it in a new tab (see
  *  svg-export.js). The picture is a snapshot — it is not linked to the
  *  project file and nothing is written to disk unless the tab is blocked. */
 function exportSvgFile() {

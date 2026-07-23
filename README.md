@@ -134,7 +134,7 @@ own maps stay untouched, and a plain reload returns to your work.
 
 | File | Shows |
 |---|---|
-| `06-readme-example.json` | the map pictured at the top of this page |
+| `06-readme-trip.json` | the map pictured at the top of this page |
 | `01-note-sizes.json` | descriptions from one line to very long |
 | `02-deep-nesting.json` | five levels of structure |
 | `03-tree-shapes.json` | branches of wildly different shape |

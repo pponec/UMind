@@ -31,9 +31,11 @@
  * so the reserved height is exact. Trade-off: <foreignObject> renders in
  * browsers but not in Inkscape/librsvg or when rasterising to PNG.
  *
- * Public API (a global, matching markdown.js style):
+ * Public API (globals, matching markdown.js style):
  *   documentToSvg(doc, opts)    -> SVG source string; opts.project names the
  *                                  project in the sheet's footer
+ *   whenLogoReady()             -> promise; await it before drawing at page
+ *                                  load, or the footer loses its logo
  * Showing or saving that string is the app's business, not this file's.
  */
 'use strict';
@@ -621,7 +623,7 @@
   // file://), the footer simply carries no picture. The 1 MB original is never
   // embedded — it is drawn small and re-encoded.
   let logoUri = null;
-  (function loadLogo() {
+  const logoLoaded = new Promise((resolve) => {
     try {
       const img = new Image();
       img.onload = () => {
@@ -631,14 +633,32 @@
           c.getContext('2d').drawImage(img, 0, 0, LOGO_RASTER, LOGO_RASTER);
           logoUri = c.toDataURL('image/png');
         } catch (e) {
-          logoUri = null; // tainted canvas: keep the text-only footer
+          // Tainted canvas — the usual cause is running from file://. The
+          // footer stays text-only; say why, or it looks like a bug.
+          logoUri = null;
+          console.warn('UMind: the picture is signed without the logo '
+            + '(the canvas is tainted — serve the app over http):', e);
         }
+        resolve();
+      };
+      img.onerror = () => {
+        console.warn('UMind: logo not found at ' + LOGO_SRC
+          + ' — the picture is signed without it.');
+        resolve();
       };
       img.src = LOGO_SRC;
     } catch (e) {
-      logoUri = null;
+      resolve();
     }
-  })();
+  });
+
+  /** Resolves once the logo is ready — or once it is certain it never will be.
+   *  Drawing straight after page load would otherwise race the 1 MB source
+   *  image and produce a footer with no logo, which is exactly what the graph
+   *  view does. Never rejects, so a caller can always just await it. */
+  function whenLogoReady() {
+    return logoLoaded;
+  }
 
   /** Today as yyyy-MM-dd, in the exporter's own timezone (not UTC). */
   function isoDate() {
@@ -748,5 +768,6 @@
   }
 
   global.documentToSvg = documentToSvg;
+  global.whenLogoReady = whenLogoReady;
 
 })(window);

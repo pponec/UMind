@@ -1228,17 +1228,20 @@ function exportSvgFile() {
 }
 
 /** Render the picture into the page and switch to viewing mode; which controls
- *  belong to which mode is spelled out once, in the CSS (body.graph-view). */
-function showGraph() {
+ *  belong to which mode is spelled out once, in the CSS (body.graph-view).
+ *  This runs at page load, so it waits for the logo the footer needs — drawing
+ *  first would race the source image and sign the sheet without it. */
+async function showGraph() {
   graphView = true; // already true when the address asked for it (see boot)
   document.body.classList.add('graph-view');
   document.querySelector('.workspace').hidden = true;
   document.querySelector('.help').hidden = true;
   document.getElementById('graph').hidden = false;
+  document.title = (doc.root.text || 'UMind').trim() + ' — graph';
+  await whenLogoReady();
   // The prolog belongs to a standalone file; here the markup is inlined.
   document.getElementById('graph-canvas').innerHTML =
     currentSvg().replace(/^<\?xml[^>]*\?>\s*/, '');
-  document.title = (doc.root.text || 'UMind').trim() + ' — graph';
 }
 
 /** Back to the editor: the same address without the "/graph" tail. */
@@ -1246,9 +1249,11 @@ function leaveGraph() {
   location.href = projectUrl(projectLabel(), false).href;
 }
 
-/** Save the picture as an .svg file on disk. */
-function downloadSvgFile() {
+/** Save the picture as an .svg file on disk. Nothing here is popup-blocked, so
+ *  it can wait for the logo rather than sign the sheet without it. */
+async function downloadSvgFile() {
   try {
+    await whenLogoReady();
     downloadBlob(currentSvg(), SVG_TYPE, slugify(doc.root.text) + '.svg');
     setStatus('svg downloaded');
   } catch (e) {

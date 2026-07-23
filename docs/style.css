@@ -525,13 +525,11 @@ kbd {
 .graph-canvas { display: inline-block; line-height: 0; }
 .graph-canvas svg { display: block; max-width: none; }
 /* Which controls belong to which mode is decided here, once — the script only
-   sets `body.graph-view`. The picture carries its own name, logo and date in
-   the bottom-right corner, so the page around it is a strip of navigation. */
+   sets `body.graph-view`. The header keeps the logo and the wordmark exactly as
+   the editor has them; only the editing buttons give way to the two viewing
+   ones, and the status (which is about saving) goes with them. */
 .graph-only { display: none; }
 body.graph-view .edit-only { display: none; }
 body.graph-view .graph-only { display: inline-block; }
-body.graph-view .toolbar { padding: 5px 14px; gap: 8px; }
-body.graph-view .brand-logo,
-body.graph-view .brand,
 body.graph-view .file-name,
 body.graph-view .status { display: none; }

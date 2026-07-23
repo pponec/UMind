@@ -17,28 +17,28 @@
     "children": [
       {
         "id": "n_share",
-        "text": "Sdílení map 🔗",
+        "text": "Sharing maps 🔗",
         "note": "",
         "collapsed": false,
         "children": [
           {
             "id": "n_dir",
             "text": "docs/data/",
-            "note": "Správce sem vloží `*.json` a commitne. Bez serverového kódu — GitHub Pages soubor rovnou servíruje.",
+            "note": "The admin drops a `*.json` file here and commits it. No server code — GitHub Pages serves the file directly.",
             "collapsed": false,
             "children": []
           },
           {
             "id": "n_url",
             "text": "?demo.json",
-            "note": "Přípona `.json` = sdílený soubor (obrázek). Bez přípony = můj localStorage projekt (editor).",
+            "note": "A `.json` ending = a shared file (a picture). No ending = my localStorage project (the editor).",
             "collapsed": false,
             "children": []
           },
           {
             "id": "n_ro",
             "text": "Read-only",
-            "note": "Nic se neukládá, dokud nekliknu na **Edit map** — teprve tím vznikne osobní kopie `?demo`.",
+            "note": "Nothing is saved until I click **Edit map** — only then is a personal copy `?demo` created.",
             "collapsed": false,
             "children": []
           }
@@ -46,7 +46,7 @@
       },
       {
         "id": "n_try",
-        "text": "Vyzkoušej 🚀",
+        "text": "Try it 🚀",
         "note": "",
         "collapsed": false,
         "children": [

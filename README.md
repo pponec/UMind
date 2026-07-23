@@ -56,6 +56,15 @@ Markdown**, with lists, tables, code and links intact.
 - **No lock-in and no bloat.** Under 2 800 lines of vanilla JavaScript, zero
   dependencies, Apache 2.0.
 
+## Desktop first
+
+UMind is built around a keyboard, and it shows. On a phone — Android in
+particular — the on-screen keyboard opens as soon as you touch a node and
+covers a good part of the screen, which leaves little room for the map you are
+editing. Reading a map, folding branches and looking at the picture are fine on
+a small screen; typing into one is cramped. Making the phone a comfortable
+place to *write* a map is not on the roadmap.
+
 ## Quick start
 
 ```

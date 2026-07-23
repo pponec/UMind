@@ -118,6 +118,7 @@ delete the tail and you are editing the same map.
 | `…/UMind/` | the project you had open last |
 | `…/UMind/?my-map` | the project saved as `my-map` |
 | `…/UMind/?my-map/graph` | its picture |
+| `…/UMind/?demo.json` | a **shared** read-only map file (shown as a picture) — see below |
 | `…/UMind/?welcome` | the guided welcome map |
 
 > **A link is not a copy.** `?my-map` picks a project out of *your own*
@@ -127,19 +128,6 @@ delete the tail and you are editing the same map.
 `?welcome` is the exception, because it carries no data of its own: it is
 always safe to share. The welcome map is a preview that is never saved, your
 own maps stay untouched, and a plain reload returns to your work.
-
-## Try the sample maps
-
-`test/json/` holds ready-made documents — open one with **Open…**:
-
-| File | Shows |
-|---|---|
-| `06-readme-trip.json` | the map pictured at the top of this page |
-| `01-note-sizes.json` | descriptions from one line to very long |
-| `02-deep-nesting.json` | five levels of structure |
-| `03-tree-shapes.json` | branches of wildly different shape |
-| `04-notes-everywhere.json` | a description on every single node |
-| `05-markdown-notes.json` | tables, code, quotes, escaping |
 
 ## Images in node descriptions
 
@@ -184,6 +172,32 @@ exactly what GitHub Pages publishes (**Deploy from a branch → `/docs`**).
   `MarkdownToHtmlConverter` — and builds DOM nodes, so all text is escaped by
   construction.
 
+## Try the demo maps
+
+The [`docs/data/`](docs/data/) folder ships a set of ready-made **shared,
+read-only** maps. Each link below opens the live app and renders that map as a
+**picture** — press **Edit map** in the corner to fork an editable copy into
+your own browser. A quick way to see what the picture engine handles:
+
+| Map | Shows |
+|---|---|
+| [`?demo.json`](https://pponec.github.io/UMind/?demo.json) | a short intro to the sharing feature |
+| [`?demo-trip.json`](https://pponec.github.io/UMind/?demo-trip.json) | the map pictured at the top of this page |
+| [`?demo-note-sizes.json`](https://pponec.github.io/UMind/?demo-note-sizes.json) | descriptions from one line to very long |
+| [`?demo-deep-nesting.json`](https://pponec.github.io/UMind/?demo-deep-nesting.json) | five levels of structure |
+| [`?demo-tree-shapes.json`](https://pponec.github.io/UMind/?demo-tree-shapes.json) | branches of wildly different shape |
+| [`?demo-notes-everywhere.json`](https://pponec.github.io/UMind/?demo-notes-everywhere.json) | a description on every single node |
+| [`?demo-markdown-notes.json`](https://pponec.github.io/UMind/?demo-markdown-notes.json) | tables, code, quotes, escaping |
+
+Publish your own the same way — drop a `.json` into `docs/data/` and open it as
+`?your-file.json`; the [folder README](docs/data/README.md) has the details and
+the naming rules.
+
+## License
+
+[Apache License 2.0](LICENSE) — free to use, modify and self-host, with an
+explicit patent grant.
+
 ## Similar open-source projects
 
 Other lightweight, actively maintained, browser-based mind-map / outliner
@@ -193,8 +207,3 @@ data in a plain file:
 - **[Mind Elixir](https://github.com/SSShooter/mind-elixir-core)** — Framework-agnostic JavaScript/TypeScript mind-map core with a clean, fast UI; runs entirely in the browser, imports and exports the whole map as JSON, and also exports PNG/SVG. MIT.
 - **[Markmap](https://github.com/markmap/markmap)** — Turns plain Markdown into an interactive mind map (via D3.js) and can generate self-contained offline HTML files, so a single `.md` file stays the source of truth. MIT.
 - **[jsMind](https://github.com/hizzgdev/jsmind)** — Small, dependency-free JavaScript mind-map library that renders and edits in the browser (SVG/canvas) and loads/saves the map as JSON. BSD.
-
-## License
-
-[Apache License 2.0](LICENSE) — free to use, modify and self-host, with an
-explicit patent grant.

@@ -1,0 +1,71 @@
+{
+  "meta": {
+    "app": "UMind",
+    "version": "1.0.0",
+    "home": "https://pponec.github.io/UMind/",
+    "project": "demo",
+    "exported": "2026-07-23 20:00"
+  },
+  "version": 1,
+  "id": "m_demo0001",
+  "rootId": "n_root",
+  "root": {
+    "id": "n_root",
+    "text": "UMind demo",
+    "note": "A **shared** map served from the `data/` folder.\n\nOpen it as `?demo.json` — it shows as a picture and is read-only. Press **Edit map** to fork your own copy.",
+    "collapsed": false,
+    "children": [
+      {
+        "id": "n_share",
+        "text": "Sdílení map 🔗",
+        "note": "",
+        "collapsed": false,
+        "children": [
+          {
+            "id": "n_dir",
+            "text": "docs/data/",
+            "note": "Správce sem vloží `*.json` a commitne. Bez serverového kódu — GitHub Pages soubor rovnou servíruje.",
+            "collapsed": false,
+            "children": []
+          },
+          {
+            "id": "n_url",
+            "text": "?demo.json",
+            "note": "Přípona `.json` = sdílený soubor (obrázek). Bez přípony = můj localStorage projekt (editor).",
+            "collapsed": false,
+            "children": []
+          },
+          {
+            "id": "n_ro",
+            "text": "Read-only",
+            "note": "Nic se neukládá, dokud nekliknu na **Edit map** — teprve tím vznikne osobní kopie `?demo`.",
+            "collapsed": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "n_try",
+        "text": "Vyzkoušej 🚀",
+        "note": "",
+        "collapsed": false,
+        "children": [
+          {
+            "id": "n_edit",
+            "text": "Edit map → fork",
+            "note": "",
+            "collapsed": false,
+            "children": []
+          },
+          {
+            "id": "n_svg",
+            "text": "Download SVG",
+            "note": "",
+            "collapsed": false,
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

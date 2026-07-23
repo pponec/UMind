@@ -937,7 +937,7 @@ function activeStorageKey() {
  *  lives here rather than in each caller, so nobody can save it by accident.
  *  Save As clears the flag first, which is what turns it into a real project. */
 function persistProject() {
-  if (!storageOk || doc.isWelcome) return;
+  if (!storageOk || doc.isWelcome || doc.isShared) return;
   try {
     localStorage.setItem(activeStorageKey(), serialise());
     localStorage.setItem(LAST_KEY, currentFileName || '');
@@ -953,7 +953,13 @@ function scheduleSave() {
   // project, so they are not persisted. It becomes a real (saved) project only
   // via New/Open or Save As (which clears isWelcome). Until then it re-seeds
   // fresh from welcome.js on every visit.
-  if (doc.isWelcome) { setStatus('preview'); return; }
+  // The welcome greeting and a shared read-only file are both ephemeral: edits
+  // are a preview and are not persisted. A shared file becomes saveable only
+  // once its "Edit map" fork clears isShared (see leaveGraph).
+  if (doc.isWelcome || doc.isShared) {
+    setStatus(doc.isShared ? 'shared' : 'preview');
+    return;
+  }
   setStatus('editing…');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
@@ -1117,6 +1123,7 @@ async function saveFileAs() {
   currentFileName = projectName; // the identifier (also the localStorage key)
   fileHandle = handle; // may be null (fallback)
   delete doc.isWelcome; // naming it makes it a real project: enable persistence
+  delete doc.isShared;  // (defensive) a named project is never a read-only file
   persistProject(); // move the working copy to the new name's key immediately
   updateFileLabel();
 
@@ -1196,32 +1203,48 @@ function newFile() {
 }
 
 /* ---------------------------------------------------------------------- */
-/* URL: which project to open, and in which view                          */
+/* URL: which map to open, and in which view                              */
 /*                                                                        */
-/* The address is a single, valueless query key: the project's own         */
-/* localStorage name, optionally with a "/graph" tail asking for the picture */
-/* instead of the outliner. Deleting that tail therefore lands you in the  */
-/* editor of the same map.                                                 */
+/* The address is a single, valueless query key. The ".json" ending picks  */
+/* the source and the default view:                                        */
+/*   - no ".json": a localStorage project, opened in the EDITOR. A "/graph" */
+/*     tail asks for its picture instead; deleting the tail returns to the  */
+/*     editor of the same map.                                             */
+/*   - ends ".json": a shared, read-only map file from the data/ folder,   */
+/*     opened as a GRAPH (a picture). It is never auto-saved; editing it    */
+/*     (the graph's "Edit map" button) forks a personal copy into           */
+/*     localStorage under the extension-free name and opens that — so the   */
+/*     first save happens only when the reader chooses to edit.            */
 /*                                                                        */
-/*   .../             the last project used here (as before)              */
-/*   .../?my-map      the project stored under "my-map"                    */
-/*   .../?my-map/graph  its graph view                                       */
-/*   .../?welcome     the greeting: always fresh, never saved (reserved)   */
-/*   .../?welcome/graph the greeting as a picture                            */
+/*   .../               the last project used here (editor)              */
+/*   .../?my-map        the project stored under "my-map" (editor)        */
+/*   .../?my-map/graph  its graph view                                    */
+/*   .../?demo.json     the shared file data/demo.json, as a picture      */
+/*   .../?welcome       the greeting: always fresh, never saved (reserved)*/
+/*   .../?welcome/graph the greeting as a picture                         */
+/*                                                                        */
+/* Only a bare file name is honoured after "?": no slashes and no "..", so */
+/* a shared map can only ever be read from that one data/ folder.         */
 /* ---------------------------------------------------------------------- */
 
 const WELCOME_KEY = 'welcome'; // reserved: the greeting, not a stored project
 const GRAPH_SUFFIX = '/graph';
 const SVG_TYPE = 'image/svg+xml';
+const SHARED_DIR = 'data';                       // the only folder shared maps load from
+const SHARED_NAME_RE = /^[a-z0-9._-]+\.json$/i;  // a bare file name — no path segments
 
-/** Read the address: { name, graph }. `name` is '' when nothing was asked for. */
+/** Read the address: { name, graph, shared }. `name` is '' when nothing was
+ *  asked for; `shared` is true for a ".json" file served from the data/ folder,
+ *  which opens as a graph. */
 function readUrlTarget() {
   const keys = [...new URLSearchParams(location.search).keys()];
   // Keep honouring ?welcome wherever it appears; otherwise the first key wins.
   const raw = keys.find((k) => k === WELCOME_KEY || k === WELCOME_KEY + GRAPH_SUFFIX)
     || keys[0] || '';
   const graph = raw.toLowerCase().endsWith(GRAPH_SUFFIX);
-  return { name: graph ? raw.slice(0, -GRAPH_SUFFIX.length) : raw, graph: graph };
+  const name = graph ? raw.slice(0, -GRAPH_SUFFIX.length) : raw;
+  const shared = /\.json$/i.test(name); // a real file name -> the shared data/ dir
+  return { name: name, graph: graph, shared: shared };
 }
 
 /** This page's address for a project, in either view. An empty name gives the
@@ -1317,8 +1340,15 @@ async function showGraph() {
     currentSvg().replace(/^<\?xml[^>]*\?>\s*/, '');
 }
 
-/** Back to the editor: the same address without the "/graph" tail. */
+/** Back to the editor. For a normal project this is just the address without
+ *  the "/graph" tail. A shared map has no editor of its own: editing it forks a
+ *  personal copy into localStorage under its extension-free name and opens that
+ *  — which is the point where the first save is finally allowed to happen. */
 function leaveGraph() {
+  if (doc.isShared) {
+    delete doc.isShared; // it is now an ordinary, saveable project
+    persistProject();    // write the fork before the address changes to it
+  }
   location.href = projectUrl(projectLabel(), false).href;
 }
 
@@ -1501,78 +1531,126 @@ storageOk = storageAvailable();
 // stripped from the address bar so a later reload (e.g. after a Save As) does
 // not re-trigger it.
 const urlTarget = readUrlTarget();
-graphView = urlTarget.graph; // set before anything can sync the address away
+graphView = urlTarget.graph || urlTarget.shared; // a shared file opens as a picture
 const forceWelcome = urlTarget.name === WELCOME_KEY;
-// ?welcome is still self-cleaning, so a later reload or Save As does not
-// re-trigger the greeting. The graph URL keeps its address: it is a view of a
-// map, and dropping "/graph" from it is how you get to the editor.
-if (forceWelcome && !urlTarget.graph) {
+
+/**
+ * Load a shared, read-only map file from the data/ folder and show its picture.
+ * Only a bare file name is accepted (SHARED_NAME_RE, and no ".."), so a map can
+ * never be read from anywhere but that single folder. It is flagged isShared —
+ * ephemeral, never auto-saved; editing forks a copy (see leaveGraph). Any
+ * failure (bad name, 404, not a map, file://) falls back to the normal boot and
+ * reports the miss.
+ */
+async function bootSharedFile(fileName) {
+  const bad = (why) => {
+    console.warn('UMind: shared map "' + fileName + '" ' + why);
+    graphView = false;
+    document.body.classList.remove('graph-view');
+    bootLocal();
+    setStatus('no shared map "' + fileName + '"');
+  };
+  if (!SHARED_NAME_RE.test(fileName) || fileName.includes('..')) {
+    return bad('refused (only a bare file name from the data/ folder is allowed)');
+  }
   try {
-    const url = new URL(location.href);
-    url.searchParams.delete(WELCOME_KEY);
-    history.replaceState(null, '', url.pathname + url.search + url.hash);
+    const res = await fetch(SHARED_DIR + '/' + encodeURIComponent(fileName),
+      { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const parsed = JSON.parse(await res.text());
+    if (!parsed.root || !parsed.rootId) throw new Error('not a UMind map');
+    doc = ensureDocId(parsed);
+    doc.isShared = true;                  // read-only preview, never persisted
+    currentFileName = baseName(fileName); // the name a fork would take on Edit
+    currentId = doc.rootId;
+    booted = true;
+    await showGraph();
+    setStatus('shared');
   } catch (e) {
-    console.warn('Could not clean the ?welcome URL:', e);
+    bad('could not be loaded: ' + e);
   }
 }
 
-// A name in the address opens that project instead of the last one used. It is
-// only a starting point: when the project is missing we fall back to the normal
-// restore rather than inventing an empty map under someone else's name.
-let urlMissing = false;
-if (!forceWelcome && urlTarget.name && storageOk) {
-  const wanted = readStoredDoc(PROJECT_PREFIX + urlTarget.name);
-  if (wanted) {
-    doc = ensureDocId(wanted);
-    currentFileName = urlTarget.name === 'untitled' ? null : urlTarget.name;
+/** The normal boot: open a localStorage project (or the greeting) from the
+ *  address, falling back to the last project used, in the editor or graph. */
+function bootLocal() {
+  // ?welcome is self-cleaning, so a later reload or Save As does not re-trigger
+  // the greeting. The graph URL keeps its address: it is a view of a map, and
+  // dropping "/graph" from it is how you get to the editor.
+  if (forceWelcome && !urlTarget.graph) {
+    try {
+      const url = new URL(location.href);
+      url.searchParams.delete(WELCOME_KEY);
+      history.replaceState(null, '', url.pathname + url.search + url.hash);
+    } catch (e) {
+      console.warn('Could not clean the ?welcome URL:', e);
+    }
+  }
+
+  // A name in the address opens that project instead of the last one used. It is
+  // only a starting point: when the project is missing we fall back to the normal
+  // restore rather than inventing an empty map under someone else's name.
+  let urlMissing = false;
+  if (!forceWelcome && urlTarget.name && storageOk) {
+    const wanted = readStoredDoc(PROJECT_PREFIX + urlTarget.name);
+    if (wanted) {
+      doc = ensureDocId(wanted);
+      currentFileName = urlTarget.name === 'untitled' ? null : urlTarget.name;
+      currentId = doc.rootId;
+    } else {
+      urlMissing = true;
+    }
+  }
+
+  if (forceWelcome) {
+    // Forced greeting: ephemeral, re-seeded from welcome.js (see starterDocument).
+    doc = starterDocument();
     currentId = doc.rootId;
+  } else if (urlTarget.name && !urlMissing) {
+    // Already loaded from the address above.
+  } else if (storageOk) {
+    const lastName = localStorage.getItem(LAST_KEY); // null = never saved here
+    const restored = readStoredDoc(PROJECT_PREFIX + (lastName || 'untitled'));
+    if (restored) {
+      doc = ensureDocId(restored);
+      currentFileName = lastName || null;
+      currentId = doc.rootId;
+    } else if (lastName === null) {
+      // First-ever visit: greet with the instructions map instead of a blank one.
+      // The welcome map is ephemeral (isWelcome flag) — not auto-saved, so it
+      // re-seeds each visit until the user picks New/Open or names it via Save As.
+      doc = starterDocument();
+      currentId = doc.rootId;
+    }
   } else {
-    urlMissing = true;
-  }
-}
-
-if (forceWelcome) {
-  // Forced greeting: ephemeral, re-seeded from welcome.js (see starterDocument).
-  doc = starterDocument();
-  currentId = doc.rootId;
-} else if (urlTarget.name && !urlMissing) {
-  // Already loaded from the address above.
-} else if (storageOk) {
-  const lastName = localStorage.getItem(LAST_KEY); // null = never saved here
-  const restored = readStoredDoc(PROJECT_PREFIX + (lastName || 'untitled'));
-  if (restored) {
-    doc = ensureDocId(restored);
-    currentFileName = lastName || null;
-    currentId = doc.rootId;
-  } else if (lastName === null) {
-    // First-ever visit: greet with the instructions map instead of a blank one.
-    // The welcome map is ephemeral (isWelcome flag) — not auto-saved, so it
-    // re-seeds each visit until the user picks New/Open or names it via Save As.
+    // No persistence (e.g. file://): every load is fresh, so greet with the map.
     doc = starterDocument();
     currentId = doc.rootId;
   }
-} else {
-  // No persistence (e.g. file://): every load is fresh, so greet with the map.
-  doc = starterDocument();
-  currentId = doc.rootId;
-}
-if (urlTarget.graph) {
-  updateFileLabel();
-  booted = true;
-  showGraph();
-} else {
-  render();
-  updateFileLabel();
-  booted = true;
-  if (!storageOk) {
-    setStatus('autosave off');
-    statusEl.title = 'localStorage is unavailable (e.g. opened via file://). ' +
-      'Use Save As to keep a .json file, or serve over http for autosave.';
-  } else if (urlMissing) {
-    setStatus('no project "' + urlTarget.name + '"');
-  } else if (doc.isWelcome) {
-    setStatus('preview'); // welcome map is not persisted (see scheduleSave)
+  if (urlTarget.graph) {
+    updateFileLabel();
+    booted = true;
+    showGraph();
   } else {
-    setStatus(currentFileName ? 'loaded' : 'ready');
+    render();
+    updateFileLabel();
+    booted = true;
+    if (!storageOk) {
+      setStatus('autosave off');
+      statusEl.title = 'localStorage is unavailable (e.g. opened via file://). ' +
+        'Use Save As to keep a .json file, or serve over http for autosave.';
+    } else if (urlMissing) {
+      setStatus('no project "' + urlTarget.name + '"');
+    } else if (doc.isWelcome) {
+      setStatus('preview'); // welcome map is not persisted (see scheduleSave)
+    } else {
+      setStatus(currentFileName ? 'loaded' : 'ready');
+    }
   }
+}
+
+if (urlTarget.shared) {
+  bootSharedFile(urlTarget.name);
+} else {
+  bootLocal();
 }

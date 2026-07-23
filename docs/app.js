@@ -1016,8 +1016,18 @@ function slugify(s) {
   return base || 'untitled';
 }
 
-function suggestedFileName() {
-  return currentFileName || slugify(doc.root.text) + '.json';
+/** Drop a trailing ".json": a file on disk carries the extension, but the
+ *  project name — the localStorage key, the URL query and meta.project — does
+ *  not. Only names derived from a real file name are stripped; a name that is
+ *  already a project key (from the URL or LAST_KEY) is used verbatim. */
+function baseName(name) {
+  return (name || '').replace(/\.json$/i, '');
+}
+
+/** The project name to offer when naming a map: the current one, or a slug of
+ *  the root text. Extension-free — callers append ".json" only for a disk file. */
+function suggestedName() {
+  return currentFileName || slugify(doc.root.text);
 }
 
 /** Show the current project's file name (or that it is not named yet). It is
@@ -1074,36 +1084,37 @@ async function saveFile() {
       console.warn('Export failed:', e);
     }
   }
-  exportDownload(json, currentFileName);
+  exportDownload(json, currentFileName + '.json');
 }
 
-/** Save As: name the project (its identifier) and export a file. */
+/** Save As: name the project (its extension-free identifier) and export a file.
+ *  The project name never carries ".json" — that belongs only on the disk file,
+ *  so it is stripped from whatever the picker or the dialog returns. */
 async function saveFileAs() {
-  let name = null;
+  let projectName = null; // extension-free identifier / localStorage key
   let handle = null;
 
   if (canFsAccess) {
     try {
       handle = await window.showSaveFilePicker({
-        suggestedName: suggestedFileName(),
+        suggestedName: suggestedName() + '.json', // the disk file keeps .json
         types: FILE_TYPES,
       });
-      name = handle.name;
+      projectName = baseName(handle.name);
     } catch (e) {
       if (e.name === 'AbortError') return; // user cancelled
       console.warn('Save As picker failed, falling back to a name dialog:', e);
     }
   }
-  if (!name) {
+  if (!projectName) {
     // In-app name dialog (window.prompt is blocked in sandboxed iframes).
-    const entered = await askName(suggestedFileName());
+    const entered = await askName(suggestedName());
     if (entered === null) return; // cancelled
-    name = entered.trim();
-    if (!name) return;
-    if (!/\.json$/i.test(name)) name += '.json';
+    projectName = baseName(entered.trim()); // tolerate a typed ".json"
+    if (!projectName) return;
   }
 
-  currentFileName = name; // the identifier (also the localStorage key)
+  currentFileName = projectName; // the identifier (also the localStorage key)
   fileHandle = handle; // may be null (fallback)
   delete doc.isWelcome; // naming it makes it a real project: enable persistence
   persistProject(); // move the working copy to the new name's key immediately
@@ -1114,7 +1125,7 @@ async function saveFileAs() {
     await writeHandle(handle, json);
     setStatus('exported to file');
   } else {
-    exportDownload(json, name);
+    exportDownload(json, projectName + '.json');
   }
 }
 
@@ -1156,7 +1167,7 @@ async function openFile() {
     try {
       const [handle] = await window.showOpenFilePicker({ types: FILE_TYPES });
       fileHandle = handle;
-      currentFileName = handle.name; // the file name becomes the project key
+      currentFileName = baseName(handle.name); // file name (minus .json) = key
       const file = await handle.getFile();
       loadDocFromText(await file.text(), 'from file');
       return;
@@ -1329,7 +1340,7 @@ fileInput.addEventListener('change', () => {
   const file = fileInput.files && fileInput.files[0];
   if (!file) return;
   fileHandle = null; // fallback mode can't keep a writable handle
-  currentFileName = file.name;
+  currentFileName = baseName(file.name); // drop .json for the project key
   const reader = new FileReader();
   reader.onload = () => loadDocFromText(String(reader.result), 'from file');
   reader.readAsText(file);

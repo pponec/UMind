@@ -112,8 +112,8 @@ If you would like to try it, the guided welcome map is at
 source code — plain JavaScript, no framework, no build, Apache 2.0 — is on
 [GitHub](https://github.com/pponec/UMind).
 
-And I am curious about the other half of the story: where does your own half-formed
-plan live right now — in an app, in a text file, or in a conversation you keep
-scrolling back through?
+Try it on the first plan that is sitting on your desk right now — a weekend away, some
+research, a talk to prepare. Before you have it fully assembled, you may find that for
+the first time in a long while you are not missing a single tab.
 
 </div>

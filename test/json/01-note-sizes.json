@@ -1,4 +1,10 @@
 {
+  "generator": {
+    "app": "UMind",
+    "version": "1.0.0",
+    "home": "https://pponec.github.io/UMind/",
+    "exported": "2026-07-23 16:39"
+  },
   "version": 1,
   "id": "m_test01",
   "rootId": "n_root",

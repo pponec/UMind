@@ -90,6 +90,21 @@
         ]
       },
       {
+        "id": "n_020",
+        "text": "An image in a note",
+        "note": "Notes can embed an image with `![alt](url)`; it scales down to the bubble width:\n\n![Train ticket — Central to Old town, one way, €29](data/train-ticket.png)",
+        "collapsed": false,
+        "children": [
+          {
+            "id": "n_021",
+            "text": "The picture comes from the data/ folder",
+            "note": "The file lives beside this map in `data/`, so it also shows in a shared graph and in a downloaded SVG (while online).\n\n![Train ticket](data/train-ticket.png)",
+            "collapsed": false,
+            "children": []
+          }
+        ]
+      },
+      {
         "id": "n_012",
         "text": "Characters that must be escaped",
         "note": "",

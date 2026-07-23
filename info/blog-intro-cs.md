@@ -12,49 +12,43 @@ nahraďte adresami, které dev.to vrátí.
 Doporučené štítky: #showdev #javascript #productivity #opensource
 -->
 
-# Nová lehká aplikace pro myšlenkové mapy na příkladu plánování výletu
+# Nová lehká aplikace UMind pro tvorbu myšlenkové mapy na příkladu plánování výletu
 
-Myšlenková mapa je jedna myšlenka uprostřed a všechno, co na ní visí, kolem ní:
-téma, jeho hlavní větve a podrobnosti, které z nich vyrůstají. Za obrázkem přitom
-není nic exotičtějšího než strom — kořen, jeho potomci a jejich potomci — tedy
-právě ten tvar, který naše poznámky mají už dávno předtím, než je zploštíme do
-dokumentu.
+Myšlenková mapa je skvělý vizuální nástroj pro uspořádání myšlenek, plánování i efektivnější učení, který místo zdlouhavého psaní textu  využívá  stromovou strukturu. Vše začíná hlavním témate tématem, z něhož  vycházejí hlavní větve představující klíčové oblasti a z nich se dále rozvětvují další a podrobnější poznámky, myšlenky či příklady. Tento styl přirozeně napodobuje fungování našeho mozku a asociací, díky čemuž na první pohled uvidíte všechny souvislosti a informace si mnohem snáze zapamatujete.
 
 **UMind** je malá aplikace pro zápis takového stromu. Každý uzel nese krátký
 titulek, jaký se dá přečíst jedním pohledem, a volitelně i delší popis: odstavec
 úvahy, tabulku cen, odkaz, kontrolní seznam — zkrátka to, co by jinak skončilo na
 okraji papíru a ztratilo se.
 
-Je to doslova statická HTML stránka. Nemá žádný backend ani telemetrii: nic z
-toho, co napíšete, neopustí váš počítač, protože není kam by to odcházelo. To má
-dva příjemné důsledky. Nic se neinstaluje — buď stránku prostě otevřete, nebo si
-složku se šesti soubory zkopírujete na vlastní webový prostor, na firemní disk
+Je to doslova jediná statická HTML stránka. Nemá žádný serverový backend ani telemetrii a nic z
+toho, co napíšete, neopustí váš počítač. To má
+dva pozitivní důsledky. Aplikace se nemusí instalovat: buď stránku prostě otevřete, nebo si
+složku s (pomocnými soubory zkopírujete na vlastní webový prostor, na firemní disk
 nebo na USB klíčenku, a dál funguje i bez připojení. A nikdo se nikam
-neregistruje: žádný účet, žádné heslo, žádný potvrzovací e-mail, protože není
-server, který by nějaký účet vedl. Mapy se průběžně ukládají v prohlížeči a
-tlačítka *Save* / *Open* je přenášejí do obyčejných souborů `.json`, které patří
-vám.
+neregistruje: žádný účet, žádné heslo, žádný potvrzovací e-mail, nic z toho není potřeba. 
+Data se průběžně ukládají v prohlížeči a
+tlačítka *Save* / *Open* je lze přenést do lokálních textových souborů typu `.json`, které je pak možné přenést na jiný počítač.
 
-Druhým principem je klávesnice. Zapsat myšlenku by nemělo znamenat mířit myší,
-takže nový uzel je <kbd>Enter</kbd>, o úroveň hlouběji <kbd>Tab</kbd>, o úroveň
-zpět <kbd>Shift</kbd>+<kbd>Tab</kbd> a popis právě vybraného uzlu se otevře
-klávesami <kbd>Alt</kbd>+<kbd>Enter</kbd>. Myš je vítaná, ale nikdy nutná. A
-protože psát a ukazovat jsou dvě různé činnosti, má tentýž dokument dva režimy:
-**editační**, ve kterém je mapa osnovou, do níž se píše, a **prezentační**, ve
-kterém se z ní stane obrázek pro ostatní.
+Pro vytváření dat se zde preferovaná klávesnice. 
+Sourozence uzlu tedy vytvoříe klávesou<kbd>Enter</kbd> a pro zanoření do hloubky se použije klávesa  <kbd>Tab</kbd>.
+Pro posun zpět na vysší úroveň se použije klávesa <kbd>Shift</kbd>+<kbd>Tab</kbd> a dialog pro detailní popis aktuáilně vybraného aktivujeme klávesami  <kbd>Alt</kbd>+<kbd>Enter</kbd>. 
+Myš bude užitečná pro pro přesun stromové struktyry do jiného uzlu.
+Obsah mapy se zapisuje v editačním režimu a takto vytvořená data lze převést do grafické podoby v prezentačním režimu.
 
-## Editační režim: jak plán doopravdy vzniká
+
+## Editační režim: jak vzniká plán  
 
 ![UMind v editačním režimu: osnova výletu vlevo, popis vybraného uzlu vpravo](img-edit.png)
 
-Představme si, že víkendový výlet je právě domluvený a nic jiného ještě ne. Cíl
-cesty se stane kořenem a místo okamžitého sbírání odkazů se vyplatí zapsat pět
-otázek, které se budou během příprav pořád vracet: jak se tam dostaneme, kde
+Představme si, plánujeme s týmem zážitovový víkend , ale zatím neznáme  detaily. 
+Cíl cesty bude stane kořenem myšlenové mapy. 
+Hned můžeme  zapsat také několik základních otázek, na které chceme hledat  odpověď: jak se tam dostaneme, kde
 budeme spát, co chceme vidět, kde se najíme a co je potřeba udělat před odjezdem.
-Zabere to půl minuty a mapa tím dostane tvar; každá odpověď, kterou později
-najdeme, už má připravené místo.
+Zabere to jen chvíli, ale mapa tím dostane tvar; každá odpověď, kterou později
+najdeme, už má v mapě své místo místo.
 
-Odpovědi totiž přicházejí na přeskáčku, jako vždycky. Kolega se zmíní, že starý
+Odpovědi běžně přicházejí na přeskáčk. Kolega se zmíní, že starý
 most stojí za vidění při východu slunce — vznikne tedy potomek uzlu *What to
 see* a důvod, proč zrovna za rozbřesku (což je ta část, na kterou se zapomíná),
 putuje do jeho popisu. Srovnání vlaku, nočního autobusu a letadla skončí jako
@@ -74,19 +68,17 @@ bydlet na šesti místech zároveň.
 
 ![Tatáž mapa v prezentačním režimu: kořen uprostřed, větve na obě strany, popisy vykreslené jako poznámky](img-graph.png)
 
-Cizí osnovu nechce číst nikdo, a tak jedno tlačítko udělá z dokumentu
-myšlenkovou mapu: téma uprostřed, větve rozložené na obě strany a každý popis
-vykreslený jako poznámka vedle uzlu, ke kterému patří — včetně formátování
-Markdownu, tabulek i odkazů. Rozvržení se počítá samo, takže není co přetahovat,
-a výsledek se dá stáhnout jako jediný soubor SVG, který otevře libovolný
-prohlížeč i telefon a který se dá vytisknout, aniž by zšedl.
+Ze surových textových poznámek pak vytvoříme jedním tlačítkem pěkně zpracovaný graf.
+Hlavní téma bude uprostřed, související větve budou rozložené rovnoměrně po obou stranách, včetně detailních poznámek. 
+Poznámky lze formáttovat základními značkami z Markdown.. Rozvržení  počítá aplikace a tak ve výsledku už není co přetahovat.
+Výsledek pak lze stáhnout jako jediný soubor SVG, který otevře libovolný
+prohlížeč i mobilní telefon.
 
-Celá výměna pak vypadá takhle: ten, koho vaše nástroje nezajímají, dostane jeden
-obrázek, a vám zůstane upravitelný originál v jednom malém souboru.
+S kolegy lze sdílet ten hotový graf, nebo jen data (v textovém formátu JSON), který si může upravovat ve stejné aplikaci každý sám. Data lze sdílet napříkad v Git repozitáři .
 
 ## Co z toho plyne
 
-Výstupem není mapa, výstupem je rozhodnutí. UMind je postavený přesně na této
+Konečným cílem však není graf myšlenkové mapy, ale rozhodnutí. UMind je postavený přesně na této
 myšlence: osnova je místo, kde se přemýšlí, obrázek je to, co se předává, a obojí
 jsou soubory, které vlastníte. Žádný účet, který je potřeba založit, žádná služba,
 které je potřeba věřit, nic k instalaci a nic, co přestane fungovat, až nějaká

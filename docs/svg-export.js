@@ -31,9 +31,10 @@
  * so the reserved height is exact. Trade-off: <foreignObject> renders in
  * browsers but not in Inkscape/librsvg or when rasterising to PNG.
  *
- * Public API (globals, matching markdown.js style):
- *   documentToSvg(doc)          -> SVG source string
- *   exportSvg(doc, fileName)    -> opens it in a new tab (downloads if blocked)
+ * Public API (a global, matching markdown.js style):
+ *   documentToSvg(doc, opts)    -> SVG source string; opts.project names the
+ *                                  project in the sheet's footer
+ * Showing or saving that string is the app's business, not this file's.
  */
 'use strict';
 
@@ -70,8 +71,8 @@
   // localStorage name) and the export date. It sits at the end of the sheet so
   // it never competes with the page hosting the picture, and it is what tells
   // a saved or forwarded file what it is and when it was made.
-  const BRAND_SIZE = 17;     // wordmark font size
-  const META_SIZE = 12.5;    // project / date font size
+  const BRAND_FONT = { weight: 700, size: 17 };   // wordmark
+  const META_FONT = { weight: 400, size: 12.5 };  // project / date
   const FOOT_H = 26;         // height of the footer line
   const FOOT_GAP = 18;       // space between the drawing and the footer rule
   const LOGO_PX = 20;        // drawn logo size
@@ -148,6 +149,14 @@
     const c = ctx();
     c.font = `${f.weight} ${f.size}px ${FONT_STACK}`;
     return c.measureText(text).width;
+  }
+
+  /** The font attributes of a <text> element — the same descriptor object that
+   *  textWidth measures, so a label can never be drawn in a font it was not
+   *  measured in. */
+  function fontAttrs(f) {
+    return `font-family="${esc(FONT_STACK)}" font-size="${f.size}"`
+      + (f.weight === 400 ? '' : ` font-weight="${f.weight}"`);
   }
 
   /** Fit a label into at most MAX_BOX_W, truncating with an ellipsis.
@@ -583,8 +592,7 @@
       `height="${h}" rx="${isRoot ? RADIUS + 2 : RADIUS}" fill="${fill}" stroke="${stroke}" ` +
       `stroke-width="${node._depth <= 1 ? 1.5 : 1}"/>` +
       `<text x="${r(node._cx)}" y="${r(node._y)}" text-anchor="middle" ` +
-      `dominant-baseline="central" fill="${colour}" ` +
-      `font-family="${esc(FONT_STACK)}" font-size="${f.size}" font-weight="${f.weight}">` +
+      `dominant-baseline="central" fill="${colour}" ${fontAttrs(f)}>` +
       `${esc(node._label)}</text></g>`
     );
   }
@@ -647,9 +655,8 @@
   /** How wide the footer is, so a small map is not narrower than its own credit. */
   function footerWidth(project) {
     const logo = logoUri ? LOGO_PX + 10 : 0;
-    return 2 * PAD + logo
-      + textWidth('UMind', { weight: 700, size: BRAND_SIZE }) + 10
-      + textWidth(footerMeta(project), { weight: 400, size: META_SIZE });
+    return 2 * PAD + logo + textWidth('UMind', BRAND_FONT) + 10
+      + textWidth(footerMeta(project), META_FONT);
   }
 
   /**
@@ -658,8 +665,8 @@
    */
   function footerSvg(project, width, height) {
     const meta = footerMeta(project);
-    const metaW = textWidth(meta, { weight: 400, size: META_SIZE });
-    const brandW = textWidth('UMind', { weight: 700, size: BRAND_SIZE });
+    const metaW = textWidth(meta, META_FONT);
+    const brandW = textWidth('UMind', BRAND_FONT);
     const logoW = logoUri ? LOGO_PX + 10 : 0;
     const right = width - PAD;
     const top = height - PAD - FOOT_H;             // top of the footer band
@@ -668,11 +675,10 @@
     const parts = [
       `<path d="M${PAD},${r(top - FOOT_GAP / 2)} H${r(right)}" stroke="${C.headRule}" ` +
       `stroke-width="1"/>`,
-      `<text x="${r(brandX)}" y="${r(mid)}" dominant-baseline="central" fill="${C.rootFill}" ` +
-      `font-family="${esc(FONT_STACK)}" font-size="${BRAND_SIZE}" font-weight="700">UMind</text>`,
+      `<text x="${r(brandX)}" y="${r(mid)}" dominant-baseline="central" ` +
+      `fill="${C.rootFill}" ${fontAttrs(BRAND_FONT)}>UMind</text>`,
       `<text x="${r(right)}" y="${r(mid)}" text-anchor="end" dominant-baseline="central" ` +
-      `fill="${C.meta}" font-family="${esc(FONT_STACK)}" font-size="${META_SIZE}">` +
-      `${esc(meta)}</text>`,
+      `fill="${C.meta}" ${fontAttrs(META_FONT)}>${esc(meta)}</text>`,
     ];
     if (logoUri) {
       parts.push(
@@ -741,35 +747,6 @@
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + parts.join('\n') + '\n';
   }
 
-  /* -------------------------------------------------------------------- */
-  /* Export action                                                         */
-  /* -------------------------------------------------------------------- */
-
-  /**
-   * Export the map and show it in a new tab. window.open must be called from
-   * the click handler's own task or the popup blocker kills it, so the SVG is
-   * built first and opened synchronously; when the popup is blocked anyway
-   * (sandboxed iframe, strict settings) we fall back to a download.
-   * Returns true when the tab opened.
-   */
-  function exportSvg(doc, fileName, opts) {
-    const svg = documentToSvg(doc, opts);
-    const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
-    const tab = global.open(url, '_blank');
-    if (!tab) {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName || 'mindmap.svg';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    }
-    // Keep the blob alive long enough for the new tab to load it.
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-    return Boolean(tab);
-  }
-
   global.documentToSvg = documentToSvg;
-  global.exportSvg = exportSvg;
 
 })(window);

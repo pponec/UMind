@@ -48,7 +48,8 @@ Markdown**, with lists, tables, code and links intact.
 
 - **Your data stays yours.** Everything is auto-saved in your browser; *Save*
   and *Open* move plain `.json` files to and from your disk. Nothing is ever
-  sent to a server — there is no server.
+  sent to a server — there is no server. (Which also means sharing is a
+  deliberate act: [send the file](#where-your-maps-live--and-how-to-share-one).)
 - **Nothing to install.** Copy `docs/` onto any static host — or open it
   straight from GitHub Pages, as above.
 - **Nothing to learn.** If you can write a bullet list, you can use it.
@@ -71,20 +72,45 @@ python3 -m http.server -d docs 8000
 Opening `docs/index.html` via `file://` also works, but browsers may switch
 localStorage off there; use **Save** / **Open** to keep a `.json` file instead.
 
+## Where your maps live — and how to share one
+
+**In your browser, and nowhere else.** Every change is auto-saved to that
+browser's **localStorage** under the project's name. There is no server, no
+account and no sync: nothing you type ever leaves your machine.
+
+That also means a map is **private to one browser on one device**. It is not
+visible to anyone else, and it will not follow you to your phone or to another
+browser on the same computer. Clearing the browser's site data removes it.
+
+**To share a map — or move it — send the file:**
+
+1. **Save** (or **Save As…**) writes the whole document to a `.json` file.
+2. Send that file, drop it in a shared folder, commit it to a repository —
+   it is plain text.
+3. The other side presses **Open…** and picks it up.
+
+For a read-only copy that anyone can look at without UMind, use **Show graph →
+Download SVG**: one self-contained picture, viewable in any browser.
+
 ## The address bar is part of the app
 
-The query is simply the project's name, optionally with a `/svg` tail — so
+The query is simply the project's name, optionally with a `/graph` tail — so
 delete the tail and you are editing the same map.
 
 | URL | Opens |
 |---|---|
 | `…/UMind/` | the project you had open last |
 | `…/UMind/?my-map` | the project saved as `my-map` |
-| `…/UMind/?my-map/svg` | its picture |
+| `…/UMind/?my-map/graph` | its picture |
 | `…/UMind/?welcome` | the guided welcome map |
 
-`?welcome` is always safe to share: the welcome map is a preview that is never
-saved, your own maps stay untouched, and a plain reload returns to your work.
+> **A link is not a copy.** `?my-map` picks a project out of *your own*
+> browser storage. Sending that URL to somebody else opens *their* browser with
+> no such project — send them the `.json` file instead (see above).
+
+`?welcome` is the exception, because it carries no data of its own: it is
+always safe to share. The welcome map is a preview that is never saved, your
+own maps stay untouched, and a plain reload returns to your work.
 
 ## Try the sample maps
 

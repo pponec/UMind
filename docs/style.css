@@ -509,7 +509,7 @@ kbd {
   font-size: 0.92em;
 }
 
-/* ---- Graph view (URL ".../?project/svg") ----
+/* ---- Graph view (URL ".../?project/graph") ----
    The exported picture hosted in the app's own chrome: the toolbar keeps the
    logo, the wordmark and the project name, and swaps the editing buttons for
    "Edit map". The sheet is shown at its natural size and scrolls; it is wider
@@ -524,8 +524,12 @@ kbd {
 .workspace[hidden], .help[hidden] { display: none; }
 .graph-canvas { display: inline-block; line-height: 0; }
 .graph-canvas svg { display: block; max-width: none; }
-/* The picture carries its own name, logo and date in the bottom-right corner,
-   so the page around it is only a strip of navigation. */
+/* Which controls belong to which mode is decided here, once — the script only
+   sets `body.graph-view`. The picture carries its own name, logo and date in
+   the bottom-right corner, so the page around it is a strip of navigation. */
+.graph-only { display: none; }
+body.graph-view .edit-only { display: none; }
+body.graph-view .graph-only { display: inline-block; }
 body.graph-view .toolbar { padding: 5px 14px; gap: 8px; }
 body.graph-view .brand-logo,
 body.graph-view .brand,

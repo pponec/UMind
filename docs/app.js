@@ -879,9 +879,12 @@ function activeStorageKey() {
   return PROJECT_PREFIX + (currentFileName || 'untitled');
 }
 
-/** Persist the document to its project key immediately (used by Save). */
+/** Persist the document to its project key immediately (used by Save). The
+ *  welcome map is ephemeral and must never land in storage — that invariant
+ *  lives here rather than in each caller, so nobody can save it by accident.
+ *  Save As clears the flag first, which is what turns it into a real project. */
 function persistProject() {
-  if (!storageOk) return;
+  if (!storageOk || doc.isWelcome) return;
   try {
     localStorage.setItem(activeStorageKey(), serialise());
     localStorage.setItem(LAST_KEY, currentFileName || '');
@@ -1197,16 +1200,22 @@ function currentSvg() {
   return documentToSvg(doc, { project: projectLabel() });
 }
 
+/** Can the graph view rebuild this map from the address alone? The greeting can
+ *  always be re-seeded from welcome.js; anything else has to be read back out
+ *  of localStorage, which is not always there (file://). */
+function addressableMap() {
+  return doc.isWelcome || storageOk;
+}
+
 /** Show graph: open the picture of this map in a new tab. The tab gets a real
  *  address (".../?project/graph") rather than a throw-away blob, so it can be
  *  reloaded, bookmarked and shared, and deleting "/graph" opens the editor.
- *  Without localStorage (file://) there is nothing for that address to read,
- *  and an unsaved greeting would render as the pristine welcome map, so both
- *  fall back to handing the finished SVG straight to a new tab — which must
- *  stay synchronous inside the click handler, or the popup blocker kills it. */
+ *  Only a map the address cannot rebuild falls back to handing the finished
+ *  SVG straight to a new tab — which must stay synchronous inside the click
+ *  handler, or the popup blocker kills it. */
 function exportSvgFile() {
   try {
-    if (storageOk && !doc.isWelcome) {
+    if (addressableMap()) {
       persistProject(); // flush the debounced save so the new tab sees this text
       if (window.open(projectUrl(projectLabel(), true).href, '_blank')) {
         setStatus('graph opened in a new tab');

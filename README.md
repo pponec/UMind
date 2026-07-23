@@ -78,6 +78,13 @@ localStorage off there; use **Save** / **Open** to keep a `.json` file instead.
 browser's **localStorage** under the project's name. There is no server, no
 account and no sync: nothing you type ever leaves your machine.
 
+localStorage is a standard part of **every** browser, so auto-save needs
+nothing special — no Chrome, no extension, no permission prompt. (The one
+browser-specific nicety is *Save* writing straight back to a real file on disk,
+which needs the File System Access API and therefore Chromium; everywhere else
+the same button simply downloads the file. Serve the app over `http` rather
+than opening it as `file://`, where some browsers do switch storage off.)
+
 That also means a map is **private to one browser on one device**. It is not
 visible to anyone else, and it will not follow you to your phone or to another
 browser on the same computer. Clearing the browser's site data removes it.

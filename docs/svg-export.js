@@ -57,7 +57,9 @@
 
   const NOTE_W = 246;        // note bubble width
   const NOTE_MIN_H = 44;
-  const NOTE_MAX_H = 300;    // taller notes are clipped (see .umnote overflow)
+  const NOTE_SLACK = 6;      // spare height, in case the viewer's fonts differ
+                             // slightly from ours: foreignObject clips, and a
+                             // bubble one line too short would lose that line
   const LEAD = 30;           // leader-line length from node to bubble
   const LANE_GAP = 16;       // clearance below a parent's hanging bubble
   const NOTE_GAP = 10;       // clearance a bubble keeps from anything else
@@ -78,7 +80,9 @@
 
   const NOTE_CSS = `
 .umnote { box-sizing: border-box; width: 100%; padding: 8px 12px 10px;
-  font: 400 11.5px/1.45 ${FONT_STACK}; color: #3d3a2f; overflow: hidden; }
+  font: 400 11.5px/1.45 ${FONT_STACK}; color: #3d3a2f;
+  display: flow-root;          /* contain child margins without clipping them */
+  overflow-wrap: break-word; } /* a long word wraps instead of sticking out */
 .umnote .h { display: block; font: 700 9.5px/1.4 ${FONT_STACK};
   letter-spacing: .09em; color: #a07c00; margin: 0 0 4px; }
 .umnote p, .umnote ul, .umnote ol, .umnote pre, .umnote blockquote,
@@ -89,15 +93,20 @@
 .umnote ul, .umnote ol { padding-left: 16px; }
 .umnote li { margin: 0 0 2px; }
 .umnote code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10.5px; background: #f3ecd0; border-radius: 3px; padding: 0 3px; }
+  font-size: 10.5px; background: #f3ecd0; border-radius: 3px; padding: 0 3px;
+  overflow-wrap: anywhere; }
+/* A pre block does not wrap by default, so a long code line used to run out of
+   the bubble and be cut off. pre-wrap keeps the indentation but breaks the
+   line. Never write a raw "<" in here: see the CDATA guard in documentToSvg. */
 .umnote pre { background: #f3ecd0; border-radius: 4px; padding: 5px 6px;
-  overflow: hidden; }
+  white-space: pre-wrap; overflow-wrap: anywhere; }
 .umnote pre code { background: none; padding: 0; }
 .umnote blockquote { padding-left: 8px; border-left: 2px solid #e0cf8a; }
 .umnote a { color: #2563eb; }
 .umnote img { max-width: 100%; }
-.umnote table { border-collapse: collapse; font-size: 10.5px; }
-.umnote th, .umnote td { border: 1px solid #e0cf8a; padding: 1px 4px; }
+.umnote table { border-collapse: collapse; font-size: 10.5px; max-width: 100%; }
+.umnote th, .umnote td { border: 1px solid #e0cf8a; padding: 1px 4px;
+  overflow-wrap: anywhere; }
 `;
 
   /* -------------------------------------------------------------------- */
@@ -178,7 +187,9 @@
     while (body.firstChild) box.appendChild(body.firstChild);
 
     host.appendChild(box);
-    const h = Math.min(NOTE_MAX_H, Math.max(NOTE_MIN_H, Math.ceil(box.offsetHeight)));
+    // No upper bound: a <foreignObject> clips whatever does not fit, so a
+    // capped height would silently drop the end of a long note.
+    const h = Math.max(NOTE_MIN_H, Math.ceil(box.offsetHeight) + NOTE_SLACK);
     const xml = new XMLSerializer().serializeToString(box);
     host.removeChild(box);
     return { h: h, xml: xml };
@@ -610,7 +621,11 @@
       `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ` +
       `width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`);
     parts.push(`<title>${esc((doc.root.text || 'UMind map').trim())}</title>`);
-    parts.push(`<style>${NOTE_CSS}</style>`);
+    // The file is parsed as XML, where a "<" inside <style> would start a tag,
+    // so the CSS is wrapped in CDATA. The markers sit inside CSS comments as
+    // well, so that inlining this SVG into an HTML page — where <style> is raw
+    // text and CDATA means nothing — leaves valid CSS either way.
+    parts.push(`<style>/* <![CDATA[ */${NOTE_CSS}/* ]]> */</style>`);
     parts.push(`<rect width="${width}" height="${height}" fill="${C.bg}"/>`);
     parts.push(`<g transform="translate(${r(dx)},${r(dy)})">`);
 

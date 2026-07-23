@@ -18,6 +18,7 @@ import com.sun.net.httpserver.HttpServer;
 
 import java.awt.Desktop;
 import java.io.IOException;
+import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URLDecoder;
@@ -52,7 +53,16 @@ public class Run {
             System.exit(1);
         }
 
-        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", port), 0);
+        // Bind up front so a busy port fails with a clear message, not a stack trace.
+        HttpServer server;
+        try {
+            server = HttpServer.create(new InetSocketAddress("127.0.0.1", port), 0);
+        } catch (BindException e) {
+            System.err.println("Port " + port + " is already in use. Stop the process "
+                    + "using it, or start on another port: java Run.java <port>");
+            System.exit(1);
+            return; // unreachable, but keeps 'server' definitely assigned
+        }
         server.createContext("/", exchange -> serve(exchange, root));
         server.setExecutor(null); // default executor keeps the JVM alive
         server.start();

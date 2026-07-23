@@ -112,7 +112,8 @@ Pokud si to chcete zkusit, uvítací mapa s návodem je na adrese
 zdrojový kód — čistý JavaScript, žádný framework, žádný build, licence Apache
 2.0 — najdete na [GitHubu](https://github.com/pponec/UMind).
 
-A zajímá mě druhá polovina příběhu: kde právě teď bydlí ten váš rozdělaný plán —
-v aplikaci, v textovém souboru, nebo v konverzaci, kterou pořád rolujete zpátky?
+Zkuste to na prvním plánu, který vám zrovna leží na stole — víkendový výlet, rešerše,
+příprava přednášky. Než ho poskládáte celý, možná zjistíte, že vám poprvé po dlouhé
+době nechybí žádná záložka.
 
 </div>

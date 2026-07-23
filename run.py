@@ -11,6 +11,7 @@ publishes; works from any working directory) and opens the page in your
 default browser. Stop with Ctrl+C.
 """
 
+import errno
 import functools
 import http.server
 import sys
@@ -39,7 +40,20 @@ def main() -> int:
     )
     url = f"http://localhost:{port}/"
 
-    with http.server.ThreadingHTTPServer(("127.0.0.1", port), handler) as httpd:
+    # Bind up front so a busy port fails with a clear message, not a traceback.
+    try:
+        httpd = http.server.ThreadingHTTPServer(("127.0.0.1", port), handler)
+    except OSError as exc:
+        if exc.errno == errno.EADDRINUSE:
+            print(
+                f"Port {port} is already in use. Stop the process using it, "
+                f"or start on another port: python3 run.py <port>",
+                file=sys.stderr,
+            )
+            return 1
+        raise
+
+    with httpd:
         print(f"UMind: {url}  (serving {root})")
         print("Press Ctrl+C to stop.")
         try:

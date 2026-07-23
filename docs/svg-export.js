@@ -51,7 +51,11 @@
 
   const PAD = 44;            // margin around the whole drawing
   const SLOT = 46;           // vertical space one plain leaf consumes
-  const COL_MIN = [300, 330];// smallest gap root->depth 1, depth 1->2 (last repeats)
+  const COL_MIN = [280, 280];// smallest gap into a note-hung depth: NOTE_W (246)
+                             // plus ~LEAD clearance, so a parent's hanging bubble
+                             // just clears the child column and no more (the
+                             // root->1 entry is unused — the root note sits in the
+                             // strip below the root, not in a column gap)
   const LINK_MIN = 120;      // shortest connector: columns grow to keep this
   const BOX_H = 34;          // node box height
   const ROOT_H = 42;         // root box height

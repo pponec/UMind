@@ -1323,10 +1323,19 @@ function exportSvgFile() {
   }
 }
 
+/** Everything the picture needs before it can be drawn: the footer logo and any
+ *  images embedded in the notes. Drawing first would race the logo's source
+ *  image and sign the sheet blank; and because the layout measures note height
+ *  synchronously, a note image that has not loaded yet would be reserved no
+ *  space and then clipped. */
+function whenGraphAssets() {
+  return Promise.all([whenLogoReady(), whenNotesReady(doc)]);
+}
+
 /** Render the picture into the page and switch to viewing mode; which controls
  *  belong to which mode is spelled out once, in the CSS (body.graph-view).
- *  This runs at page load, so it waits for the logo the footer needs — drawing
- *  first would race the source image and sign the sheet without it. */
+ *  This runs at page load, so it waits for the assets the drawing needs (see
+ *  whenGraphAssets). */
 async function showGraph() {
   graphView = true; // already true when the address asked for it (see boot)
   document.body.classList.add('graph-view');
@@ -1334,10 +1343,7 @@ async function showGraph() {
   document.querySelector('.help').hidden = true;
   document.getElementById('graph').hidden = false;
   document.title = (doc.root.text || 'UMind').trim() + ' — graph';
-  // Wait for the footer logo and for any images in the notes: the layout
-  // measures note height synchronously, so an image that has not loaded yet
-  // would be reserved no space and then clipped.
-  await Promise.all([whenLogoReady(), whenNotesReady(doc)]);
+  await whenGraphAssets();
   // The prolog belongs to a standalone file; here the markup is inlined.
   document.getElementById('graph-canvas').innerHTML =
     currentSvg().replace(/^<\?xml[^>]*\?>\s*/, '');
@@ -1356,10 +1362,11 @@ function leaveGraph() {
 }
 
 /** Save the picture as an .svg file on disk. Nothing here is popup-blocked, so
- *  it can wait for the logo rather than sign the sheet without it. */
+ *  it can wait for the drawing's assets (see whenGraphAssets) rather than draw
+ *  the sheet without them. */
 async function downloadSvgFile() {
   try {
-    await Promise.all([whenLogoReady(), whenNotesReady(doc)]);
+    await whenGraphAssets();
     downloadBlob(currentSvg(), SVG_TYPE, slugify(doc.root.text) + '.svg');
     setStatus('svg downloaded');
   } catch (e) {

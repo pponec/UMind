@@ -214,12 +214,15 @@
     });
   }
 
-  /** Absolute URLs of every Markdown image in a note tree (for preloading). */
+  /** Absolute URLs of every Markdown image in a note tree (for preloading).
+   *  Uses the real renderer, not a second image-syntax parser, so the URLs
+   *  match exactly what buildNote() later looks up in the cache. */
   function noteImageUrls(node, out) {
     if (node.note) {
-      const re = /!\[[^\]]*\]\(\s*([^)\s]+)/g;
-      let m;
-      while ((m = re.exec(node.note))) out.push(absolute(m[1]));
+      const div = document.createElement('div');
+      global.renderMarkdownInto(div, node.note);
+      div.querySelectorAll('img[src]').forEach(
+        (el) => out.push(absolute(el.getAttribute('src'))));
     }
     node.children.forEach((k) => noteImageUrls(k, out));
     return out;

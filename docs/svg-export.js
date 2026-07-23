@@ -14,8 +14,9 @@
  *   4. A node's description is drawn as a UML-style note bubble whose *space is
  *      reserved during layout* — that is what guarantees bubbles never overlap
  *      anything, instead of trying to place them afterwards:
- *        - leaf   -> the outer gutter, vertically aligned with the node,
- *                    its slot grown to the bubble height;
+ *        - leaf   -> the outer gutter, level with its node, sliding down past
+ *                    anything already there (placeBubbles) so free gutter
+ *                    space is used instead of reserved in the branch stack;
  *        - parent -> hanging straight below its own node, inside the parent's
  *                    column (never the child column), so the leader is a short
  *                    vertical drop and only the overhang below the subtree
@@ -59,6 +60,8 @@
   const NOTE_MAX_H = 300;    // taller notes are clipped (see .umnote overflow)
   const LEAD = 30;           // leader-line length from node to bubble
   const LANE_GAP = 16;       // clearance below a parent's hanging bubble
+  const NOTE_GAP = 10;       // clearance a bubble keeps from anything else
+  const FAN_SLICES = 6;      // pieces a connector is reserved in (see fanRects)
   const DOGEAR = 14;         // folded-corner size (always the top-right corner)
 
   // Light palette — deliberately independent of the app theme.
@@ -259,48 +262,142 @@
     });
   }
 
-  /**
-   * Assign y positions to one side by packing leaves into vertical slots; a
-   * parent sits at the mean of its children. Returns the height consumed.
-   *
-   * A leaf's slot grows to fit its bubble (both live in the outer gutter, so
-   * they must not share vertical space). A parent's bubble hangs straight
-   * below its node *in the parent's own column* — the column its children are
-   * not in — so it costs nothing unless it reaches lower than the subtree
-   * already does; only that overflow is reserved, which keeps the bubble next
-   * to its node and the drawing short.
-   */
-  function layoutSide(branches, side, widths) {
-    let y = 0;
-    const slot = (h) => { const centre = y + h / 2; y += h; return centre; };
+  /** First pass: label, width, depth and side for every node, plus the widest
+   *  box per depth (which decides the column offsets). */
+  function measure(node, depth, side, widths) {
+    node._depth = depth;
+    node._side = side;
+    const fit = fitLabel(node.text, boxFont(depth));
+    node._label = fit.label;
+    node._w = fit.w;
+    widths[depth] = Math.max(widths[depth] || 0, fit.w);
+    node.children.forEach((k) => measure(k, depth + 1, side, widths));
+  }
 
-    const walk = (node, depth) => {
-      node._side = side;
-      node._depth = depth;
-      const fit = fitLabel(node.text, boxFont(depth));
-      node._label = fit.label;
-      node._w = fit.w;
-      widths[depth] = Math.max(widths[depth] || 0, fit.w);
-      const kids = node.children;
-      if (!kids.length) {
-        node._y = slot(node.note ? Math.max(SLOT, node.note.h + 14) : SLOT);
-      } else {
-        kids.forEach((k) => walk(k, depth + 1));
-        node._y = (kids[0]._y + kids[kids.length - 1]._y) / 2;
-        if (node.note && hangCrosses(node, depth, node.note.h, widths)) {
-          // Too wide for its node: fall back to a lane below the whole subtree,
-          // which no connector can reach.
-          node._lane = slot(node.note.h + LANE_GAP);
-        } else if (node.note) {
-          // Push the block down only as far as the hanging bubble overhangs.
-          const bottom = node._y + BOX_H / 2 + LEAD + node.note.h + LANE_GAP;
-          if (bottom > y) y = bottom;
+  /**
+   * The area this node's connectors sweep. Reserving it keeps a neighbour's
+   * bubble from ending up in the middle of a link. Each connector is cut into
+   * FAN_SLICES pieces rather than taken as one bounding box: the cubic is
+   * monotone in both axes, so a slice is exactly the curve's own extent there,
+   * and the staircase hugs the curve instead of claiming the whole rectangle
+   * between the two columns. The node's own bubble belongs to the same group
+   * and is never tested against these (that case is hangCrosses' job).
+   */
+  function fanRects(node) {
+    const x1 = node._side > 0 ? node._x + node._w : node._x;
+    const out = [];
+    node.children.forEach((child) => {
+      const x2 = node._side > 0 ? child._x : child._x + child._w;
+      const span = x2 - x1;
+      const drop = child._y - node._y;
+      const at = (t) => ({
+        x: x1 + span * (1.5 * t * (1 - t) + t * t * t),
+        y: node._y + drop * (3 * t * t - 2 * t * t * t),
+      });
+      let a = at(0);
+      for (let i = 1; i <= FAN_SLICES; i++) {
+        const b = at(i / FAN_SLICES);
+        out.push({
+          x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), fan: true,
+          w: Math.abs(b.x - a.x), h: Math.max(Math.abs(b.y - a.y), 1),
+        });
+        a = b;
+      }
+    });
+    return out;
+  }
+
+  /** The rectangles a node itself occupies, once its `_y` is known. */
+  function attachRects(node) {
+    node._boxRect = boxRect(node);
+    node._noteRect = node.note ? noteRect(node) : null;
+    node._fanRects = fanRects(node);
+  }
+
+  /** Every rectangle of a placed subtree (the group that moves as one). */
+  function subtreeRects(node, out) {
+    const list = out || [];
+    if (node._boxRect) list.push(node._boxRect);
+    if (node._noteRect) list.push(node._noteRect);
+    if (node._fanRects) list.push(...node._fanRects);
+    node.children.forEach((k) => subtreeRects(k, list));
+    return list;
+  }
+
+  /** Move a whole placed subtree down; its rectangles move with it, so the
+   *  occupancy list (which holds the same objects) stays correct. */
+  function shiftSubtree(node, dy) {
+    node._y += dy;
+    if (node._boxRect) node._boxRect.y += dy;
+    if (node._noteRect) node._noteRect.y += dy;
+    if (node._fanRects) node._fanRects.forEach((r) => { r.y += dy; });
+    node.children.forEach((k) => shiftSubtree(k, dy));
+  }
+
+  /** Slide a freshly positioned group down until none of its rectangles touch
+   *  anything already placed. Returns how far it moved. */
+  function slideDown(node, placed) {
+    const rects = subtreeRects(node);   // mutated in place by shiftSubtree
+    const own = new Set(rects);         // the group's own rectangles never count
+    let moved = 0;
+    for (let guard = 0; guard < 200; guard++) {
+      let delta = 0;
+      for (const r of rects) {
+        for (const p of placed) {
+          if (!own.has(p) && collides(r, p)) {
+            delta = Math.max(delta, p.y + p.h + NOTE_GAP - r.y);
+          }
         }
       }
+      if (delta <= 0) break;
+      shiftSubtree(node, delta);
+      moved += delta;
+    }
+    return moved;
+  }
+
+  /**
+   * Second pass: give one side its y positions. Leaves are handed out on a
+   * plain SLOT grid (so the reading order is fixed) and a parent sits at the
+   * mean of its children — but each node, together with its bubble and its
+   * whole subtree, is a rigid group that slides down only as far as a real
+   * rectangle collision demands. That is what lets a branch rise into the
+   * space beside a tall note instead of below it: a long note costs height
+   * only in the column it actually occupies.
+   */
+  function placeSide(branches, widths) {
+    const placed = [];        // every rectangle occupied on this side
+    const state = { cursor: 0 };
+
+    const place = (node) => {
+      const kids = node.children;
+      if (!kids.length) {
+        node._y = state.cursor + SLOT / 2;
+        attachRects(node);
+        slideDown(node, placed);
+        state.cursor = node._y + SLOT / 2;
+      } else {
+        kids.forEach(place);
+        node._y = (kids[0]._y + kids[kids.length - 1]._y) / 2;
+        if (node.note && hangCrosses(node, node._depth, node.note.h, widths)) {
+          // Too wide for its node: fall back to a lane below the whole subtree,
+          // where no connector can reach it.
+          const bottom = subtreeRects(node).reduce((m, r) => Math.max(m, r.y + r.h), 0);
+          node._lane = bottom + LANE_GAP + node.note.h / 2;
+        }
+        attachRects(node);
+        state.cursor += slideDown(node, placed);
+      }
+      placed.push(node._boxRect, ...node._fanRects);
+      if (node._noteRect) placed.push(node._noteRect);
     };
 
-    branches.forEach((b) => walk(b, 1));
-    return y;
+    branches.forEach(place);
+    if (!placed.length) return { top: 0, bottom: 0 };
+    return {
+      top: placed.reduce((m, r) => Math.min(m, r.y), Infinity),
+      bottom: placed.reduce((m, r) => Math.max(m, r.y + r.h), -Infinity),
+    };
   }
 
   /** Column offsets per depth. Each column is pushed out far enough that even
@@ -314,13 +411,6 @@
       colX.push(colX[d - 1] + Math.max(min, prev + LINK_MIN));
     }
     return colX;
-  }
-
-  /** Shift a laid-out subtree vertically (used to centre the two sides). */
-  function shiftY(node, dy) {
-    node._y += dy;
-    if (node._lane != null) node._lane += dy;
-    node.children.forEach((k) => shiftY(k, dy));
   }
 
   /** Assign x positions: every depth is its own column, mirrored on the left. */
@@ -343,48 +433,69 @@
         : node._x - LEAD - NOTE_W;
       return { x: x, y: node._y - h / 2, w: NOTE_W, h: h, kind: 'leaf' };
     }
-    if (node._lane != null) {                      // parent, fallback placement
-      return {
-        x: node._cx - NOTE_W / 2, y: node._lane - h / 2, w: NOTE_W, h: h, kind: 'parent',
-      };
-    }
-    // Parent: hangs right below the node, flush with the node's inner edge, so
-    // it stays clear of the connector arriving on that side and of the child
-    // column (COL_MIN > NOTE_W keeps it out of the next column either way).
+    // Parent: flush with the node's inner edge, so it never reaches into the
+    // corridor the incoming connector arrives through, nor into the child
+    // column (COL_MIN > NOTE_W keeps it out of that either way). Normally it
+    // hangs right below the node; `_lane` is the fallback for a bubble so much
+    // wider than its node that it would sit in the outgoing fan.
     const x = node._side > 0 ? node._x : node._x + node._w - NOTE_W;
-    return { x: x, y: node._y + BOX_H / 2 + LEAD, w: NOTE_W, h: h, kind: 'parent' };
+    const y = node._lane != null ? node._lane - h / 2 : node._y + BOX_H / 2 + LEAD;
+    return { x: x, y: y, w: NOTE_W, h: h, kind: 'parent' };
   }
 
-  /** Lay the (already measured) layout tree out and collect flat draw lists. */
+  /** Rectangle a node's box occupies. */
+  function boxRect(node) {
+    const h = node._depth === 0 ? ROOT_H : BOX_H;
+    return { x: node._x, y: node._y - h / 2, w: node._w, h: h };
+  }
+
+  /** Do two rectangles touch? Drawn shapes keep a clearance between them; a
+   *  connector corridor is a bare area, so merely sitting against its edge —
+   *  which every bubble flush with a column does — must not count. */
+  function collides(a, b) {
+    const m = (a.fan || b.fan) ? 0 : NOTE_GAP;
+    return a.x < b.x + b.w + m && b.x < a.x + a.w + m
+      && a.y < b.y + b.h + m && b.y < a.y + a.h + m;
+  }
+
+  /** Lay the (already measured) layout tree out and collect flat draw lists.
+   *  Order: labels and widths -> column offsets and x -> y placement, because
+   *  the vertical pass tests real rectangles and so needs the x positions. */
   function layout(root) {
     const { right, left } = splitBranches(root.children);
     const widths = [];
-    const hRight = layoutSide(right, 1, widths);
-    const hLeft = layoutSide(left, -1, widths);
-    const height = Math.max(hRight, hLeft, SLOT);
-    right.forEach((b) => shiftY(b, (height - hRight) / 2));
-    left.forEach((b) => shiftY(b, (height - hLeft) / 2));
-
+    const fit = fitLabel(root.text, boxFont(0));
     root._depth = 0;
     root._side = 1;
-    const fit = fitLabel(root.text, boxFont(0));
     root._label = fit.label;
     root._w = fit.w;
-    root._x = -root._w / 2;
-    root._cx = 0;
-    root._y = height / 2;
     widths[0] = root._w;
+    right.forEach((b) => measure(b, 1, 1, widths));
+    left.forEach((b) => measure(b, 1, -1, widths));
 
     const colX = columns(widths, widths.length - 1);
+    root._x = -root._w / 2;
+    root._cx = 0;
     right.forEach((b) => assignX(b, colX));
     left.forEach((b) => assignX(b, colX));
+
+    const spanR = placeSide(right, widths);
+    const spanL = placeSide(left, widths);
+    const hR = spanR.bottom - spanR.top;
+    const hL = spanL.bottom - spanL.top;
+    const height = Math.max(hR, hL, SLOT);
+    right.forEach((b) => shiftSubtree(b, (height - hR) / 2 - spanR.top));
+    left.forEach((b) => shiftSubtree(b, (height - hL) / 2 - spanL.top));
+
+    root._y = height / 2;
+    attachRects(root);
 
     const boxes = [];
     const links = [];
     const bubbles = [];
     const collect = (node) => {
       boxes.push(node);
-      if (node.note) bubbles.push({ node: node, note: node.note, rect: noteRect(node) });
+      if (node._noteRect) bubbles.push({ node: node, note: node.note, rect: node._noteRect });
       node.children.forEach((k) => { links.push([node, k]); collect(k); });
     };
     collect(root);

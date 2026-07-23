@@ -1,12 +1,59 @@
 # UMind <sub><img src="docs/images/umind-logo.png" alt="UMind logo" height="80"></sub>
 
-UMind — a minimalist, self-hosted mind-mapping app by a static HTML5 code with JavaScript Vanilla.
+**Think in an outline, share as a picture.** UMind is a minimalist, self-hosted
+mind-mapping app — one HTML file, plain JavaScript, no build step, no account,
+no cloud. Your maps live in your browser and in `.json` files you own.
 
-**▶ Try it live:** https://pponec.github.io/UMind/?welcome — always opens the
-welcome/instructions map, and runs entirely in your browser (auto-saved to
-localStorage, no account needed). The `?welcome` link is non-destructive: the
-welcome map is a preview only, your saved maps are left untouched, and a plain
-reload returns to your own work.
+**▶ Try it live:** **https://pponec.github.io/UMind/?welcome**
+
+[![A map exported by UMind](docs/images/graph-example.png)](docs/images/graph-example.png)
+
+<sup>The picture above is real UMind output — every node, every description,
+one SVG file. Click it for full size.</sup>
+
+## Two modes, one document
+
+### ✍️ Edit — hands stay on the keyboard
+
+The editor is an **outliner**: a nested list you grow by typing. No dragging
+boxes around a canvas, no layout to fiddle with — the structure *is* the map.
+
+| Key | Does |
+|---|---|
+| <kbd>Enter</kbd> | new node below |
+| <kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> | indent / outdent |
+| <kbd>↑</kbd> <kbd>↓</kbd> | move between nodes |
+| <kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>Alt</kbd>+<kbd>↓</kbd> | reorder among siblings |
+| <kbd>Alt</kbd>+<kbd>Enter</kbd> | write a **description** (Markdown) |
+| <kbd>Backspace</kbd> on an empty node | delete it, keep its children |
+| <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> | undo / redo |
+
+The mouse is welcome too: drag the ⠿ grip to move a branch anywhere, click
+▸ / ▾ to fold one away.
+
+### 🖼 Present — one click to a picture
+
+**Show graph** turns the whole document into a two-sided mind map: the root in
+the middle, branches fanning left and right, curved connectors, and every
+description drawn as a note beside the node it belongs to — **rendered
+Markdown**, with lists, tables, code and links intact.
+
+- The layout is computed for you, and packs itself so a long note never pushes
+  the rest of the map down.
+- Always light, whatever your theme, so it prints and shares well.
+- The picture signs itself: logo, project name and export date in the corner.
+- **Download SVG** saves it; text stays text, so it scales to any size.
+
+## Why you might like it
+
+- **Your data stays yours.** Everything is auto-saved in your browser; *Save*
+  and *Open* move plain `.json` files to and from your disk. Nothing is ever
+  sent to a server — there is no server.
+- **Nothing to install.** Copy `docs/` onto any static host — or open it
+  straight from GitHub Pages, as above.
+- **Nothing to learn.** If you can write a bullet list, you can use it.
+- **No lock-in and no bloat.** Under 2 800 lines of vanilla JavaScript, zero
+  dependencies, Apache 2.0.
 
 ## Quick start
 
@@ -14,66 +61,48 @@ reload returns to your own work.
 python3 run.py       # then open http://localhost:8000/
 ```
 
-No Python? `java Run.java` does the same (Java 17+, no build step). Details below.
-
-## Requirements
-
-Two independent things describe the frontend code:
-
-- **Approach — "vanilla" JavaScript.** This is *not* a version; it means plain
-  JS with **no framework and no library** (no React/Vue/jQuery), and here also
-  **no build step, no bundler, no polyfills, and no ES modules** — just classic
-  `<script src="…">` tags.
-- **Language version — ECMAScript 2017 (`ES2017`, a.k.a. `ES8`).** This is the
-  edition the code targets. The newest syntax used is `async/await` (ES2017);
-  there is no optional chaining, nullish coalescing, or other ES2020+ syntax.
-  (ECMAScript editions, for reference: ES6 = ES2015, ES8 = ES2017, ES11 =
-  ES2020.)
-
-So the accurate one-line label is **"vanilla JavaScript, ECMAScript 2017"** —
-the first says *how* it is written, the second says *which language version*.
-
-In practice the app is gated by two runtime features rather than by JS syntax:
-the CSS `:has()` selector (mobile detail card) and Pointer Events. So any
-**evergreen browser from late 2023** runs it — **Chrome/Edge 105+, Safari
-15.4+, Firefox 121+**. The optional disk **Save/Open** to a real file uses the
-File System Access API (Chromium only) and degrades gracefully to a
-download + file picker elsewhere.
-
-## Running the app
-
-The app is a static frontend (`index.html`, `app.js`, `markdown.js`,
-`svg-export.js`, `style.css`) that lives in **`docs/`**, so GitHub Pages
-publishes it as-is with the **Deploy from a branch → `/docs`** source
-(Settings → Pages). Serve it over http so that auto-save (localStorage) works
-reliably.
-
-From the repository root, use one of the bundled launchers (they serve `docs/`
-and open the browser for you; both take an optional port, default `8000`):
-
-```
-python3 run.py           # or: python3 run.py 9000
-java Run.java            # or: java Run.java 9000  (Java 17+, no build step)
-```
-
-A plain static server works too:
+No Python? `java Run.java` does the same (Java 17+, no build step). Both take
+an optional port: `python3 run.py 9000`. A plain static server works too:
 
 ```
 python3 -m http.server -d docs 8000
 ```
 
-Then open http://localhost:8000/
+Opening `docs/index.html` via `file://` also works, but browsers may switch
+localStorage off there; use **Save** / **Open** to keep a `.json` file instead.
 
-Opening `docs/index.html` directly via `file://` also works, but localStorage
-auto-save may be disabled by the browser; use the **Save** / **Open** buttons to
-keep a `umind.json` file instead.
+## The address bar is part of the app
+
+The query is simply the project's name, optionally with a `/svg` tail — so
+delete the tail and you are editing the same map.
+
+| URL | Opens |
+|---|---|
+| `…/UMind/` | the project you had open last |
+| `…/UMind/?my-map` | the project saved as `my-map` |
+| `…/UMind/?my-map/svg` | its picture |
+| `…/UMind/?welcome` | the guided welcome map |
+
+`?welcome` is always safe to share: the welcome map is a preview that is never
+saved, your own maps stay untouched, and a plain reload returns to your work.
+
+## Try the sample maps
+
+`test/json/` holds ready-made documents — open one with **Open…**:
+
+| File | Shows |
+|---|---|
+| `06-readme-example.json` | the map pictured at the top of this page |
+| `01-note-sizes.json` | descriptions from one line to very long |
+| `02-deep-nesting.json` | five levels of structure |
+| `03-tree-shapes.json` | branches of wildly different shape |
+| `04-notes-everywhere.json` | a description on every single node |
+| `05-markdown-notes.json` | tables, code, quotes, escaping |
 
 ## Images in node descriptions
 
-Node descriptions are Markdown, so they can embed images with
-`![alt](src)`. How the `src` resolves is governed by the browser's security
-model, so a few rules apply — **especially** when the app is hosted on GitHub
-Pages or any `https`/`http` origin:
+Descriptions are Markdown, so they can embed images with `![alt](src)`. How
+`src` resolves is governed by the browser's security model:
 
 | `src` value | Result |
 |---|---|
@@ -83,21 +112,35 @@ Pages or any `https`/`http` origin:
 | `data:image/png;base64,…` | Embedded inline; works everywhere. Note it is stored in the document JSON / localStorage, so keep such images small. |
 
 **You cannot reference an image from the local filesystem** (`file://`) from a
-hosted page — that includes GitHub Pages. To use a local image you must **run a
-local server** and reference the file by a relative path served from `docs/`
-(or a subfolder). For example, drop the file in `docs/images/logo.png`, start a
-launcher above, and in a node description write:
+hosted page — that includes GitHub Pages. To use a local image, drop the file
+in `docs/images/logo.png`, start a launcher above, and write in a description:
 
 ```markdown
-Project logo:
-
 ![UMind logo](images/logo.png)
 ```
 
-The browser then requests `http://localhost:8000/images/logo.png`, which the
-launcher serves from `docs/images/`. The same relative reference keeps working
-after deployment, provided `docs/images/logo.png` is committed and published
-with the app.
+The browser then requests `http://localhost:8000/images/logo.png`, and the same
+relative reference keeps working after deployment, provided the file is
+committed and published with the app.
+
+## Under the hood
+
+The whole app is a handful of static files in **`docs/`** — `index.html`,
+`app.js`, `markdown.js`, `svg-export.js`, `welcome.js`, `style.css` — which is
+exactly what GitHub Pages publishes (**Deploy from a branch → `/docs`**).
+
+- **Vanilla JavaScript.** Not a version but an approach: no framework, no
+  library, no bundler, no polyfills, no ES modules — just `<script src="…">`.
+- **ECMAScript 2017.** The newest syntax used is `async`/`await`; no optional
+  chaining or other ES2020+ constructs.
+- **Runs in any evergreen browser from late 2023** — Chrome/Edge 105+,
+  Safari 15.4+, Firefox 121+. (The limits are the CSS `:has()` selector and
+  Pointer Events, not the JavaScript.) Saving to a real file on disk uses the
+  File System Access API where available (Chromium) and falls back to a
+  download plus file picker everywhere else.
+- The Markdown renderer is our own — a JavaScript port of Ujorm's
+  `MarkdownToHtmlConverter` — and builds DOM nodes, so all text is escaped by
+  construction.
 
 ## Similar open-source projects
 
@@ -108,3 +151,8 @@ data in a plain file:
 - **[Mind Elixir](https://github.com/SSShooter/mind-elixir-core)** — Framework-agnostic JavaScript/TypeScript mind-map core with a clean, fast UI; runs entirely in the browser, imports and exports the whole map as JSON, and also exports PNG/SVG. MIT.
 - **[Markmap](https://github.com/markmap/markmap)** — Turns plain Markdown into an interactive mind map (via D3.js) and can generate self-contained offline HTML files, so a single `.md` file stays the source of truth. MIT.
 - **[jsMind](https://github.com/hizzgdev/jsmind)** — Small, dependency-free JavaScript mind-map library that renders and edits in the browser (SVG/canvas) and loads/saves the map as JSON. BSD.
+
+## License
+
+[Apache License 2.0](LICENSE) — free to use, modify and self-host, with an
+explicit patent grant.

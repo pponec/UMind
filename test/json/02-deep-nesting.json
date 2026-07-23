@@ -23,7 +23,7 @@
               {
                 "id": "n_004",
                 "text": "Level 3 — what Enter really does",
-                "note": "It inserts a sibling *after* the focused node and moves the caret there.",
+                "note": "It inserts a sibling _after_ the focused node and moves the caret there.",
                 "collapsed": false,
                 "children": [
                   {

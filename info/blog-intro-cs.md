@@ -14,17 +14,17 @@ Doporučené štítky: #showdev #javascript #productivity #opensource
 
 <div style="margin-top: 10px; margin-left: 10px; width: 800px;">
 
-# UMind: lehká aplikace myšlenkové mapy na příkladu plánování výletu
+# UMind: lehká aplikace pro myšlenkové mapy na příkladu plánování výletu
 
 Myšlenková mapa je vizuální nástroj pro uspořádání myšlenek, plánování i efektivnější
 učení: místo zdlouhavého psaní textu využívá stromovou strukturu. Všechno začíná
 hlavním tématem, z něhož vycházejí hlavní větve představující klíčové oblasti, a z nich
 se dále rozvětvují podrobnější poznámky, nápady či příklady. Tento styl přirozeně
-napodobuje fungování našeho mozku a asociací, díky čemuž na první pohled uvidíte
+napodobuje způsob, jakým mozek pracuje s asociacemi, díky čemuž na první pohled uvidíte
 souvislosti a informace si mnohem snáze zapamatujete.
 
 **UMind** je malá aplikace pro zápis takového stromu. Každý uzel nese krátký
-titulek, jaký se dá přečíst jedním pohledem, a volitelně i delší popis: odstavec
+titulek, který se dá přečíst jedním pohledem, a volitelně i delší popis: odstavec
 úvahy, tabulku cen, odkaz, kontrolní seznam — zkrátka to, co by jinak skončilo na
 okraji papíru a ztratilo se.
 
@@ -32,13 +32,14 @@ Celá aplikace je statická webová stránka: pár souborů HTML, JavaScriptu a 
 build, žádné závislosti. Nemá serverový backend ani telemetrii, takže nic z toho, co
 napíšete, neopustí váš počítač. To má dva příjemné důsledky. Nic se neinstaluje —
 buď stránku otevřete na webu, nebo si složku se soubory zkopírujete na vlastní webový
-prostor, na firemní disk či na USB klíčenku a funguje i bez připojení. A nikdo se nikam
-neregistruje: žádný účet, žádné heslo, žádný potvrzovací e-mail — není totiž server,
-který by nějaký účet vedl.
+prostor, na firemní disk či na USB klíčenku a aplikace pak funguje i bez připojení.
+A nikdo se nikam neregistruje: žádný účet, žádné heslo, žádný potvrzovací e-mail —
+není totiž server, který by nějaký účet vedl.
 
 Mapy se průběžně ukládají do úložiště prohlížeče (`localStorage`), takže žijí v jednom
-prohlížeči na jednom počítači a smazáním dat webu zmizí. Tlačítky *Save* a *Open* je
-přenesete do textových souborů `.json`, které patří vám — a s nimi i na jiný počítač.
+prohlížeči na jednom počítači; když v něm smažete data webu, zmizí i mapy. Tlačítko
+*Save* proto uloží celý dokument do textového souboru `.json`, který patří vám,
+a tlačítko *Open* ho zase načte zpátky — třeba na jiném počítači.
 
 Aplikaci lze pustit i lokálně, bez internetu. V projektu najdete dva pomocné skripty,
 které rozjedou malý webový server: jeden potřebuje Python 3 (`python3 run.py`), druhý
@@ -47,13 +48,14 @@ Otevřít `index.html` rovnou z disku přes `file://` sice také jde, ale někte
 tam `localStorage` vypínají a mapa se pak sama neuloží — proto je místní server lepší
 volba.
 
-Při psaní má přednost klávesnice. Sourozenecký uzel vytvoříte klávesou <kbd>Enter</kbd>,
-o úroveň hlouběji se zanoříte klávesou <kbd>Tab</kbd> a zpět nahoru se dostanete
-kombinací <kbd>Shift</kbd>+<kbd>Tab</kbd>; dialog s podrobným popisem právě vybraného
-uzlu otevřete pomocí <kbd>Alt</kbd>+<kbd>Enter</kbd>. Myš se hodí na přetažení celé
-větve jinam (za úchyt v levém okraji uzlu) a na sbalení hotové větve. Obsah mapy se
-zapisuje v editačním režimu a jedním tlačítkem (*Show graph*) se převede do grafické
-podoby v prezentačním režimu. Rozhraní je anglické, stejně jako na obrázcích níže.
+Při psaní má přednost klávesnice. Další uzel na stejné úrovni vytvoříte klávesou
+<kbd>Enter</kbd>, o úroveň hlouběji se zanoříte klávesou <kbd>Tab</kbd> a zpět nahoru
+se dostanete kombinací <kbd>Shift</kbd>+<kbd>Tab</kbd>; dialog s podrobným popisem
+právě vybraného uzlu otevřete pomocí <kbd>Alt</kbd>+<kbd>Enter</kbd>. Myš se hodí na
+přetažení celé větve jinam (za úchyt v levém okraji uzlu) nebo na sbalení té hotové.
+Obsah mapy se zapisuje v editačním režimu a jedním tlačítkem (*Show graph*) se převede
+do grafické podoby v prezentačním režimu. Rozhraní aplikace je anglické, jak je vidět
+i na obrázcích níže.
 
 ## Editační režim: jak vzniká plán
 
@@ -67,43 +69,45 @@ tím dostane tvar; každá odpověď, kterou později najdeme, už má v mapě s
 
 Odpovědi běžně přicházejí na přeskáčku. Kolega se zmíní, že starý most stojí za vidění
 při východu slunce — vznikne tedy potomek uzlu *What to see* (Co chceme vidět) a důvod,
-proč zrovna za rozbřesku (což je ta část, na kterou se zapomíná), putuje do jeho popisu.
+proč zrovna za rozbřesku, tedy ta část, na kterou se nejčastěji zapomíná, putuje do
+jeho popisu.
 Srovnání vlaku, nočního autobusu a letadla skončí jako malá tabulka v popisu uzlu
 *Getting there* (Jak se tam dostaneme), spolu s jedinou větou, která to rozhoduje:
 vyhrává vlak, protože jede z centra do centra. O týden později je tabulka pořád na svém
 místě, takže nikdo nemusí znovu otevírat pět záložek, aby si vzpomněl, proč byl noční
 autobus za 19 eur zamítnutý.
 
-Sama osnova se přitom celou dobu hýbe. *Beer garden by the river* začne život pod
-památkami a nenápadně se přestěhuje pod *Food & drink*, klávesy
-<kbd>Alt</kbd>+<kbd>↑</kbd> přeskládají sourozence ve chvíli, kdy se ukáže, že
-jídlo je důležitější než hrady, a hotovou větev lze sbalit, aby dostaly prostor
-ty nedořešené. Titulky zůstanou přehledné, rešerše po ruce a plán přestane
-bydlet na šesti místech zároveň.
+Sama osnova se přitom celou dobu hýbe. *Beer garden by the river* (Pivní zahrádka
+u řeky) se nejdřív objeví pod památkami a nenápadně se přestěhuje pod *Food & drink*
+(Jídlo a pití); klávesy <kbd>Alt</kbd>+<kbd>↑</kbd> přeskládají uzly na stejné úrovni
+ve chvíli, kdy se ukáže, že jídlo je důležitější než hrady; a hotovou větev lze sbalit,
+aby dostaly prostor ty nedořešené. Titulky zůstanou přehledné, rešerše po ruce a plán
+přestane bydlet na šesti místech zároveň.
 
 ## Prezentační režim: tentýž dokument jako obrázek
 
 ![Tatáž mapa v prezentačním režimu: kořen uprostřed, větve na obě strany, popisy vykreslené jako poznámky](img-graph.png)
 
-Ze surových textových poznámek pak vytvoříme jedním tlačítkem pěkně zpracovaný graf.
-Hlavní téma je uprostřed, související větve jsou rozložené rovnoměrně po obou stranách,
-včetně podrobných poznámek. Poznámky lze formátovat základními značkami Markdownu.
-Rozvržení počítá aplikace, takže ve výsledku už není co přetahovat. Hotový graf se dá
-stáhnout jako jediný soubor SVG, který otevře libovolný prohlížeč i mobilní telefon.
+Ze surových textových poznámek pak vytvoříme jedním tlačítkem úhledný graf. Hlavní téma
+je uprostřed, související větve jsou rozložené rovnoměrně po obou stranách a vedle uzlů
+se vykreslí i jejich podrobné poznámky — ty lze formátovat základními značkami
+Markdownu. Rozvržení počítá aplikace, takže ve výsledku už není co přetahovat. Hotový
+graf se dá stáhnout jako jediný soubor SVG, který otevře libovolný prohlížeč i mobilní
+telefon.
 
 S kolegy pak lze sdílet buď ten hotový obrázek, nebo rovnou data v textovém formátu
 JSON, která si každý může dál upravovat ve své vlastní kopii aplikace. Takový soubor se
-dá sdílet třeba v Git repozitáři.
+dá sdílet třeba v gitovém repozitáři.
 
 ## Co z toho plyne
 
-Konečným cílem však není graf myšlenkové mapy, ale rozhodnutí. UMind je postavený přesně
+Konečným cílem není graf myšlenkové mapy, ale rozhodnutí. UMind je postavený přesně
 na této myšlence: osnova je místo, kde se přemýšlí, obrázek je to, co se předává, a obojí
 jsou soubory, které vlastníte. Žádný účet, který je potřeba založit, žádná služba,
 které je potřeba věřit, nic k instalaci a nic, co přestane fungovat, až nějaká
 firma změní plány.
 
-Pokud si to chcete zkusit, průvodní uvítací mapa je na adrese
+Pokud si to chcete zkusit, uvítací mapa s návodem je na adrese
 [pponec.github.io/UMind/?welcome](https://pponec.github.io/UMind/?welcome) a
 zdrojový kód — čistý JavaScript, žádný framework, žádný build, licence Apache
 2.0 — najdete na [GitHubu](https://github.com/pponec/UMind).

@@ -66,6 +66,15 @@
   const FAN_SLICES = 6;      // pieces a connector is reserved in (see fanRects)
   const DOGEAR = 14;         // folded-corner size (always the top-right corner)
 
+  // Sheet header, echoing the app's toolbar: the wordmark on the left, the
+  // project — its localStorage name — on the right. Text only and no logo
+  // bitmap: the file stays small and self-contained, and the branding proper
+  // belongs to the page that hosts the picture (graph view in index.html).
+  const BRAND_SIZE = 19;     // wordmark font size
+  const META_SIZE = 13;      // project-name font size
+  const HEAD_H = 26;         // height of the header line itself
+  const HEAD_GAP = 20;       // space between the header rule and the drawing
+
   // Light palette — deliberately independent of the app theme.
   const C = {
     bg: '#ffffff',
@@ -76,6 +85,7 @@
     link: '#9db3d6',
     noteFill: '#fffbea', noteStroke: '#e0b400', noteFlap: '#f4e7b0',
     leader: '#d9a400',
+    headRule: '#e3e8ef', meta: '#6b7280',
   };
 
   const NOTE_CSS = `
@@ -592,8 +602,43 @@
     );
   }
 
-  /** Build the whole SVG document source for the given map. */
-  function documentToSvg(doc) {
+  /**
+   * The sheet header: "UMind" on the left, the project's localStorage name on
+   * the right, and a hairline under both. It identifies the picture once it
+   * has been saved or sent somewhere on its own.
+   */
+  function headerSvg(project, width) {
+    const y = PAD + HEAD_H * 0.75;                 // baseline of both labels
+    const rule = PAD + HEAD_H + HEAD_GAP / 2;
+    const parts = [
+      `<text x="${PAD}" y="${r(y)}" fill="${C.rootFill}" font-family="${esc(FONT_STACK)}" ` +
+      `font-size="${BRAND_SIZE}" font-weight="700">UMind</text>`,
+      `<path d="M${PAD},${r(rule)} H${r(width - PAD)}" stroke="${C.headRule}" stroke-width="1"/>`,
+    ];
+    if (project) {
+      // Kept next to the wordmark rather than out at the right edge: these
+      // sheets are wide, and a label alone in the far corner reads as unrelated.
+      const x = PAD + textWidth('UMind', { weight: 700, size: BRAND_SIZE }) + 12;
+      parts.push(
+        `<text x="${r(x)}" y="${r(y)}" fill="${C.meta}" ` +
+        `font-family="${esc(FONT_STACK)}" font-size="${META_SIZE}">· ${esc(project)}</text>`);
+    }
+    return parts.join('\n');
+  }
+
+  /** Width the header needs, so a small map is not narrower than its own title. */
+  function headerWidth(project) {
+    const brand = textWidth('UMind', { weight: 700, size: BRAND_SIZE });
+    const meta = project ? textWidth('· ' + project, { weight: 400, size: META_SIZE }) : 0;
+    return 2 * PAD + brand + (meta ? meta + 12 : 0);
+  }
+
+  /**
+   * Build the whole SVG document source for the given map.
+   * `opts.project` is the project's localStorage name, shown in the header.
+   */
+  function documentToSvg(doc, opts) {
+    const project = (opts && opts.project) || '';
     const root = layoutTree(doc.root);
     measureNotes(root);
     const scene = layout(root);
@@ -611,10 +656,11 @@
       grow(b.rect.x, b.rect.y, b.rect.x + b.rect.w, b.rect.y + b.rect.h);
     });
 
-    const width = Math.ceil(maxX - minX + 2 * PAD);
-    const height = Math.ceil(maxY - minY + 2 * PAD);
-    const dx = PAD - minX;
-    const dy = PAD - minY;
+    const top = PAD + HEAD_H + HEAD_GAP;           // first row below the header
+    const width = Math.max(Math.ceil(maxX - minX + 2 * PAD), Math.ceil(headerWidth(project)));
+    const height = Math.ceil(maxY - minY + top + PAD);
+    const dx = (width - (maxX - minX)) / 2 - minX; // centre a map narrower than the header
+    const dy = top - minY;
 
     const parts = [];
     parts.push(
@@ -627,6 +673,7 @@
     // text and CDATA means nothing — leaves valid CSS either way.
     parts.push(`<style>/* <![CDATA[ */${NOTE_CSS}/* ]]> */</style>`);
     parts.push(`<rect width="${width}" height="${height}" fill="${C.bg}"/>`);
+    parts.push(headerSvg(project, width));
     parts.push(`<g transform="translate(${r(dx)},${r(dy)})">`);
 
     parts.push(`<g fill="none" stroke="${C.link}" stroke-width="2" stroke-linecap="round">`);
@@ -656,8 +703,8 @@
    * (sandboxed iframe, strict settings) we fall back to a download.
    * Returns true when the tab opened.
    */
-  function exportSvg(doc, fileName) {
-    const svg = documentToSvg(doc);
+  function exportSvg(doc, fileName, opts) {
+    const svg = documentToSvg(doc, opts);
     const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
     const tab = global.open(url, '_blank');
     if (!tab) {

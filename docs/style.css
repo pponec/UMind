@@ -508,3 +508,25 @@ kbd {
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-size: 0.92em;
 }
+
+/* ---- Graph view (URL ".../?project/svg") ----
+   The exported picture hosted in the app's own chrome: the toolbar keeps the
+   logo, the wordmark and the project name, and swaps the editing buttons for
+   "Edit map". The sheet is shown at its natural size and scrolls; it is wider
+   than any window on all but the smallest maps. */
+.graph {
+  padding: 18px 20px 40px;
+  overflow-x: auto;          /* the sheet scrolls, the page body never does */
+}
+/* An author `display` beats the UA `[hidden]{display:none}`, so restore it —
+   the graph view hides the editor with the attribute (cf. .detail-editor). */
+.workspace[hidden], .help[hidden] { display: none; }
+.graph-canvas {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;       /* the picture is always light, so is its frame */
+  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+  line-height: 0;            /* no stray baseline gap under the <svg> */
+}
+.graph-canvas svg { display: block; max-width: none; }

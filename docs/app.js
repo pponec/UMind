@@ -964,8 +964,10 @@ function suggestedFileName() {
   return currentFileName || slugify(doc.root.text) + '.json';
 }
 
-/** Show the current project's file name (or that it is not named yet). */
+/** Show the current project's file name (or that it is not named yet). It is
+ *  also the moment the project's identity can change, so the address follows. */
 function updateFileLabel() {
+  syncUrlToProject();
   if (!fileNameEl) return;
   fileNameEl.textContent = currentFileName || '(unsaved)';
   fileNameEl.classList.toggle('unbound', !currentFileName);
@@ -1122,17 +1124,130 @@ function newFile() {
   setStatus('new project');
 }
 
-/** Show graph: draw the map as an SVG picture and open it in a new tab (see
- *  svg-export.js). The picture is a snapshot — it is not linked to the
- *  project file and nothing is written to disk unless the tab is blocked. */
+/* ---------------------------------------------------------------------- */
+/* URL: which project to open, and in which view                          */
+/*                                                                        */
+/* The address is a single, valueless query key: the project's own         */
+/* localStorage name, optionally with a "/svg" tail asking for the picture */
+/* instead of the outliner. Deleting that tail therefore lands you in the  */
+/* editor of the same map.                                                 */
+/*                                                                        */
+/*   .../             the last project used here (as before)              */
+/*   .../?my-map      the project stored under "my-map"                    */
+/*   .../?my-map/svg  its graph view                                       */
+/*   .../?welcome     the greeting: always fresh, never saved (reserved)   */
+/*   .../?welcome/svg the greeting as a picture                            */
+/* ---------------------------------------------------------------------- */
+
+const WELCOME_KEY = 'welcome'; // reserved: the greeting, not a stored project
+const GRAPH_SUFFIX = '/svg';
+
+/** Read the address: { name, graph }. `name` is '' when nothing was asked for. */
+function readUrlTarget() {
+  const keys = [...new URLSearchParams(location.search).keys()];
+  // Keep honouring ?welcome wherever it appears; otherwise the first key wins.
+  const raw = keys.find((k) => k === WELCOME_KEY || k === WELCOME_KEY + GRAPH_SUFFIX)
+    || keys[0] || '';
+  const graph = raw.toLowerCase().endsWith(GRAPH_SUFFIX);
+  return { name: graph ? raw.slice(0, -GRAPH_SUFFIX.length) : raw, graph: graph };
+}
+
+/** Keep the address pointing at the project actually open, so a reload or a
+ *  shared link opens this map and not the one named before it was renamed.
+ *  Never touches ?welcome, which cleans itself up at boot (see below). */
+function syncUrlToProject() {
+  if (graphView) return; // the graph URL is set by whoever navigated here
+  try {
+    const url = new URL(location.href);
+    const target = readUrlTarget();
+    if (!target.name || target.name === WELCOME_KEY) return; // nothing to keep in sync
+    url.search = currentFileName ? '?' + encodeURIComponent(currentFileName) : '';
+    history.replaceState(null, '', url.pathname + url.search + url.hash);
+  } catch (e) {
+    console.warn('Could not update the project URL:', e);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Graph view                                                             */
+/* ---------------------------------------------------------------------- */
+
+let graphView = false; // true when this page shows the picture, not the tree
+
+/** The project name to put in the picture's header and in its URL. */
+function projectLabel() {
+  if (doc.isWelcome) return WELCOME_KEY;
+  return currentFileName || 'untitled';
+}
+
+/** Show graph: open the picture of this map in a new tab. The tab gets a real
+ *  address (".../?project/svg") rather than a throw-away blob, so it can be
+ *  reloaded, bookmarked and shared, and deleting "/svg" opens the editor.
+ *  Without localStorage (file://) there is nothing for that address to read,
+ *  and an unsaved greeting would render as the pristine welcome map, so both
+ *  fall back to handing the finished SVG straight to a new tab. */
 function exportSvgFile() {
   try {
     const name = suggestedFileName().replace(/\.json$/i, '') + '.svg';
-    setStatus(exportSvg(doc, name) ? 'svg opened in a new tab' : 'svg downloaded');
+    if (storageOk && !doc.isWelcome) {
+      persistProject(); // flush the debounced save so the new tab sees this text
+      const url = new URL(location.href);
+      url.search = '?' + encodeURIComponent(projectLabel()) + GRAPH_SUFFIX;
+      if (window.open(url.href, '_blank')) {
+        setStatus('graph opened in a new tab');
+        return;
+      }
+    }
+    setStatus(exportSvg(doc, name, { project: projectLabel() })
+      ? 'graph opened in a new tab' : 'svg downloaded');
   } catch (e) {
     console.warn('SVG export failed:', e);
     setStatus('svg export failed');
   }
+}
+
+/** Render the picture into the page and switch the toolbar to viewing mode. */
+function showGraph() {
+  graphView = true; // already true when the address asked for it (see boot)
+  document.querySelector('.workspace').hidden = true;
+  document.querySelector('.help').hidden = true;
+  document.getElementById('graph').hidden = false;
+  for (const id of ['btn-undo', 'btn-redo', 'btn-new', 'btn-open', 'btn-save',
+    'btn-saveas', 'btn-svg']) {
+    document.getElementById(id).hidden = true;
+  }
+  document.getElementById('btn-edit').hidden = false;
+  document.getElementById('btn-svg-save').hidden = false;
+  const svg = documentToSvg(doc, { project: projectLabel() });
+  // The prolog belongs to a standalone file; here the markup is inlined.
+  document.getElementById('graph-canvas').innerHTML =
+    svg.replace(/^<\?xml[^>]*\?>\s*/, '');
+  document.title = (doc.root.text || 'UMind').trim() + ' — graph';
+  fileNameEl.textContent = projectLabel();   // the map being viewed, not "(unsaved)"
+  fileNameEl.classList.remove('unbound');
+  fileNameEl.title = 'Project shown in this picture';
+  setStatus('graph');
+}
+
+/** Back to the editor: the same address without the "/svg" tail. */
+function leaveGraph() {
+  const url = new URL(location.href);
+  url.search = '?' + encodeURIComponent(projectLabel());
+  location.href = url.href;
+}
+
+/** Save the picture shown in the graph view as a file on disk. */
+function downloadSvgFile() {
+  const svg = documentToSvg(doc, { project: projectLabel() });
+  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = slugify(doc.root.text) + '.svg';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  setStatus('svg downloaded');
 }
 
 // Fallback file-input change handler (no File System Access API).
@@ -1280,6 +1395,8 @@ document.getElementById('btn-open').addEventListener('click', openFile);
 document.getElementById('btn-save').addEventListener('click', saveFile);
 document.getElementById('btn-saveas').addEventListener('click', saveFileAs);
 document.getElementById('btn-svg').addEventListener('click', exportSvgFile);
+document.getElementById('btn-edit').addEventListener('click', leaveGraph);
+document.getElementById('btn-svg-save').addEventListener('click', downloadSvgFile);
 detailEditBtn.addEventListener('click', () => enterNoteEdit(currentId));
 
 // Clicking the toolbar logo opens it at full size; a click anywhere on the
@@ -1298,14 +1415,34 @@ storageOk = storageAvailable();
 // makes ?welcome safe to link publicly (e.g. from the README). The flag is
 // stripped from the address bar so a later reload (e.g. after a Save As) does
 // not re-trigger it.
-const forceWelcome = new URLSearchParams(location.search).has('welcome');
-if (forceWelcome) {
+const urlTarget = readUrlTarget();
+graphView = urlTarget.graph; // set before anything can sync the address away
+const forceWelcome = urlTarget.name === WELCOME_KEY;
+// ?welcome is still self-cleaning, so a later reload or Save As does not
+// re-trigger the greeting. The graph URL keeps its address: it is a view of a
+// map, and dropping "/svg" from it is how you get to the editor.
+if (forceWelcome && !urlTarget.graph) {
   try {
     const url = new URL(location.href);
-    url.searchParams.delete('welcome');
+    url.searchParams.delete(WELCOME_KEY);
     history.replaceState(null, '', url.pathname + url.search + url.hash);
   } catch (e) {
     console.warn('Could not clean the ?welcome URL:', e);
+  }
+}
+
+// A name in the address opens that project instead of the last one used. It is
+// only a starting point: when the project is missing we fall back to the normal
+// restore rather than inventing an empty map under someone else's name.
+let urlMissing = false;
+if (!forceWelcome && urlTarget.name && storageOk) {
+  const wanted = readStoredDoc(PROJECT_PREFIX + urlTarget.name);
+  if (wanted) {
+    doc = ensureDocId(wanted);
+    currentFileName = urlTarget.name === 'untitled' ? null : urlTarget.name;
+    currentId = doc.rootId;
+  } else {
+    urlMissing = true;
   }
 }
 
@@ -1313,6 +1450,8 @@ if (forceWelcome) {
   // Forced greeting: ephemeral, re-seeded from welcome.js (see starterDocument).
   doc = starterDocument();
   currentId = doc.rootId;
+} else if (urlTarget.name && !urlMissing) {
+  // Already loaded from the address above.
 } else if (storageOk) {
   const lastName = localStorage.getItem(LAST_KEY); // null = never saved here
   const restored = readStoredDoc(PROJECT_PREFIX + (lastName || 'untitled'));
@@ -1332,15 +1471,23 @@ if (forceWelcome) {
   doc = starterDocument();
   currentId = doc.rootId;
 }
-render();
-updateFileLabel();
-booted = true;
-if (!storageOk) {
-  setStatus('autosave off');
-  statusEl.title = 'localStorage is unavailable (e.g. opened via file://). ' +
-    'Use Save As to keep a .json file, or serve over http for autosave.';
-} else if (doc.isWelcome) {
-  setStatus('preview'); // welcome map is not persisted (see scheduleSave)
+if (urlTarget.graph) {
+  updateFileLabel();
+  booted = true;
+  showGraph();
 } else {
-  setStatus(currentFileName ? 'loaded' : 'ready');
+  render();
+  updateFileLabel();
+  booted = true;
+  if (!storageOk) {
+    setStatus('autosave off');
+    statusEl.title = 'localStorage is unavailable (e.g. opened via file://). ' +
+      'Use Save As to keep a .json file, or serve over http for autosave.';
+  } else if (urlMissing) {
+    setStatus('no project "' + urlTarget.name + '"');
+  } else if (doc.isWelcome) {
+    setStatus('preview'); // welcome map is not persisted (see scheduleSave)
+  } else {
+    setStatus(currentFileName ? 'loaded' : 'ready');
+  }
 }

@@ -19,9 +19,19 @@
     <button id="btn-save" title="Export the project to its .json file">Save</button>
     <button id="btn-saveas" title="Name the project and export a .json file">Save As…</button>
     <button id="btn-svg" title="Draw the whole map as a picture (SVG) and open it in a new tab">Show graph</button>
+    <!-- Graph view only (URL ".../?project/svg"): back to editing, and a copy
+         of the picture for disk. Both are hidden while editing. -->
+    <button id="btn-edit" class="primary" hidden
+      title="Back to editing this map">Edit map</button>
+    <button id="btn-svg-save" hidden title="Save the picture as an .svg file">Download SVG</button>
     <span id="file-name" class="file-name" title="Current project (auto-saved in the browser)">(unsaved)</span>
     <span id="status" class="status" title="Auto-saved to your browser">saved</span>
   </header>
+
+  <!-- Graph view: the exported picture, hosted in the app's own chrome. -->
+  <main id="graph" class="graph" hidden>
+    <div id="graph-canvas" class="graph-canvas"></div>
+  </main>
 
   <div class="workspace">
     <main>
@@ -64,6 +74,7 @@
     <span><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> undo/redo</span>
     <span>drag <span aria-hidden="true">⠿</span> to move</span>
     <span class="persist-note">Your work is <strong>auto-saved in this browser</strong> · <strong>Save</strong>/<strong>Save&nbsp;As</strong> export a <code>.json</code> file to disk · <strong>Open</strong> loads one · <strong>New</strong> starts a fresh project</span>
+    <span class="persist-note">The address names the project: <code>?my-map</code> opens it, <code>?my-map/svg</code> shows its picture · <code>?welcome</code> is this guide</span>
   </footer>
 
   <dialog id="name-dialog" class="note-dialog">

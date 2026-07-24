@@ -1,3 +1,4 @@
+// UMind (https://pponec.github.io/UMind/) — Apache License 2.0
 /*
  * UMind — SVG export (Phase 2 add-on, self-contained).
  *

@@ -1,3 +1,4 @@
+// UMind (https://pponec.github.io/UMind/) — Apache License 2.0
 'use strict';
 
 /*

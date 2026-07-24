@@ -1,3 +1,4 @@
+// UMind (https://pponec.github.io/UMind/) — Apache License 2.0
 /*
  * UMind — Phase 0 outliner prototype (vanilla JS, no dependencies).
  *
@@ -1361,6 +1362,24 @@ function leaveGraph() {
   location.href = projectUrl(projectLabel(), false).href;
 }
 
+/** New from the graph view: start a fresh, unnamed project in the editor
+ *  WITHOUT forking the current map into localStorage. Reaching the editor the
+ *  usual way ("Edit map" then New) first persists the open map — including a
+ *  shared, read-only file — under its own key; New here skips that, so opening
+ *  a shared map only to start your own leaves no copy of the source behind.
+ *  Done in place (the reverse of showGraph), because navigating would reboot
+ *  and restore the last project instead of the fresh one. */
+function newFromGraph() {
+  graphView = false;
+  document.body.classList.remove('graph-view');
+  document.getElementById('graph').hidden = true;
+  document.querySelector('.workspace').hidden = false;
+  document.querySelector('.help').hidden = false;
+  document.title = 'UMind — Mind Map Outliner';
+  history.replaceState(null, '', location.pathname); // drop ?<map>[/graph]
+  newFile();
+}
+
 /** Save the picture as an .svg file on disk. Nothing here is popup-blocked, so
  *  it can wait for the drawing's assets (see whenGraphAssets) rather than draw
  *  the sheet without them. */
@@ -1521,6 +1540,7 @@ document.getElementById('btn-save').addEventListener('click', saveFile);
 document.getElementById('btn-saveas').addEventListener('click', saveFileAs);
 document.getElementById('btn-svg').addEventListener('click', exportSvgFile);
 document.getElementById('btn-edit').addEventListener('click', leaveGraph);
+document.getElementById('btn-graph-new').addEventListener('click', newFromGraph);
 document.getElementById('btn-svg-save').addEventListener('click', downloadSvgFile);
 detailEditBtn.addEventListener('click', () => enterNoteEdit(currentId));
 

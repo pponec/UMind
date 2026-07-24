@@ -129,6 +129,22 @@ delete the tail and you are editing the same map.
 always safe to share. The welcome map is a preview that is never saved, your
 own maps stay untouched, and a plain reload returns to your work.
 
+**The `.json` suffix is the switch.** A name *without* it — `?my-map` — opens a
+**private** project from *your own* browser storage. A name *ending* in
+`.json` — `?demo.json` — instead **fetches a file the site publishes**, a real
+`.json` served from the app's own `data/` folder:
+
+```
+https://pponec.github.io/UMind/?demo.json
+```
+
+Such a **shared map** opens as a read-only picture, is never auto-saved, and
+re-reads the file on every visit — so it is the one kind of link you *can* hand
+to somebody else and trust that they see the same map. Pressing **Edit map**
+forks a private, editable copy into their browser without ever touching the
+published file. Publishing one is just dropping a `.json` into `docs/data/`
+(see [Try the demo maps](#try-the-demo-maps) below).
+
 ## Images in node descriptions
 
 Descriptions are Markdown, so they can embed images with `![alt](src)`. How
@@ -171,6 +187,43 @@ exactly what GitHub Pages publishes (**Deploy from a branch → `/docs`**).
 - The Markdown renderer is our own — a JavaScript port of Ujorm's
   `MarkdownToHtmlConverter` — and builds DOM nodes, so all text is escaped by
   construction.
+
+## Security
+
+UMind is **only** HTML, CSS and JavaScript running inside the visitor's browser
+tab. That is not a corner cut — it *is* the security model, and it is worth
+being explicit about what it does and does not allow, especially when the app is
+served from a static host such as **GitHub Pages**.
+
+- **JavaScript has no reach into your computer — by design.** A web page cannot
+  read your files, list your folders or run programs; the browser sandbox
+  forbids it. UMind keeps maps in `localStorage` (its own private slot in your
+  browser) and touches the disk *only* through a file picker **you** open with
+  **Save** / **Open** — one file you choose, when you choose it. Nothing scans
+  your drive, and there is no API that could.
+
+- **A static host runs no code of yours.** On GitHub Pages — or any static
+  server — there is no backend, no database, no session and no credentials: the
+  server only hands out files. It cannot receive, log or store anything you
+  type, because nothing you type is ever sent to it.
+
+- **Shared map files are read-only and locked to one folder.** A `?name.json`
+  URL fetches from the app's own `data/` folder and nowhere else: the name must
+  be a bare file name (`/^[a-z0-9._-]+\.json$/i`), a `..` is rejected outright, and
+  the request is same-origin — there is no path to traverse toward the rest of
+  the server. A shared map opens as a read-only picture; **Edit map** forks a
+  private copy into your browser and never writes back to the published file.
+
+- **Markdown is rendered, not executed.** The description renderer builds DOM
+  nodes and sets text through `textContent`, so every character is escaped by
+  construction — there is no `innerHTML` path for markup to slip in. The
+  `javascript:`, `vbscript:` and `data:` link schemes are refused (images may
+  use `data:`, links may not), and a `file://` reference is blocked by the
+  browser (see [Images in node descriptions](#images-in-node-descriptions)).
+
+Because there is no server logic, the most a hosted UMind can do to a visitor is
+show them a map — and the reverse holds just as firmly: it can learn nothing
+about them.
 
 ## Try the demo maps
 

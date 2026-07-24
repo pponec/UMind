@@ -64,7 +64,10 @@ body {
   line-height: 1;
   letter-spacing: 0.3px;
   margin-right: 14px; /* extra breathing room before the action buttons */
+  text-decoration: none; /* it is now an <a> to the home page */
+  cursor: pointer;
 }
+.brand:hover { text-decoration: underline; }
 .spacer { flex: 1; }
 .status { color: var(--muted); font-size: 13px; min-width: 60px; }
 .file-name {

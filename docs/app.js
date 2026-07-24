@@ -16,10 +16,12 @@
 /* ---------------------------------------------------------------------- */
 
 // Stamped into every exported document (see serialise). Bump APP_VERSION when
-// the released app changes; APP_HOME is where a stray file can find its reader.
+// the released app changes; APP_HOME is the project's home page — the GitHub
+// repository, which carries the app's documentation and a link to run it live,
+// and which the toolbar wordmark links to.
 const APP_NAME = 'UMind';
 const APP_VERSION = '1.0.0';
-const APP_HOME = 'https://pponec.github.io/UMind/';
+const APP_HOME = 'https://github.com/pponec/UMind';
 
 /* ---------------------------------------------------------------------- */
 /* Data model                                                             */
@@ -1543,6 +1545,13 @@ document.getElementById('btn-edit').addEventListener('click', leaveGraph);
 document.getElementById('btn-graph-new').addEventListener('click', newFromGraph);
 document.getElementById('btn-svg-save').addEventListener('click', downloadSvgFile);
 detailEditBtn.addEventListener('click', () => enterNoteEdit(currentId));
+
+// The wordmark links to the project's home page (same in edit and graph view,
+// since the header's .brand is shared by both). href and tooltip come from
+// APP_HOME so it stays the single source of truth.
+const brandHome = document.getElementById('brand-home');
+brandHome.href = APP_HOME;
+brandHome.title = 'Go to the ' + APP_NAME + ' home page (' + APP_HOME + ')';
 
 // Clicking the toolbar logo opens it at full size; a click anywhere on the
 // dialog (image or backdrop) or Esc closes it.

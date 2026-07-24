@@ -98,7 +98,18 @@ phone included.
 
 With colleagues you can then share either the finished picture, or the data itself in
 the plain-text JSON format, which everyone can go on editing in their own copy of the
-app. Such a file can be shared through a Git repository, for instance.
+app. Such a file can be emailed or kept in a Git repository. And if you host the app
+yourself — for free on GitHub Pages, say — you only drop `trip.json` next to the page,
+and anyone can open the map as a picture through the address `…/?trip.json` alone, with
+nothing to install.
+
+Sharing a map by a public address is safe by the very nature of the web: the app is only
+HTML, CSS and JavaScript running in a browser tab, and that has — and by design cannot
+have — any control over the visitor's computer; it does not read their files, run
+programs or quietly send anything anywhere. A static host such as GitHub Pages runs none
+of your code either, it just hands out the finished files. So a shared map can do one
+single thing: show itself. Anyone who wants to edit it clicks *Edit map* and gets their
+own copy in their browser, while the shared file stays untouched.
 
 ## What it adds up to
 

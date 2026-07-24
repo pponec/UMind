@@ -97,7 +97,18 @@ telefon.
 
 S kolegy pak lze sdílet buď ten hotový obrázek, nebo rovnou data v textovém formátu
 JSON, která si každý může dál upravovat ve své vlastní kopii aplikace. Takový soubor se
-dá sdílet třeba v gitovém repozitáři.
+dá poslat e-mailem nebo uložit do gitového repozitáře. A pokud aplikaci sami hostujete —
+klidně zdarma na GitHub Pages — stačí soubor `vylet.json` nechat ležet vedle stránky
+a kdokoli si mapu otevře jako obrázek pouhou adresou `…/?vylet.json`, aniž by cokoli
+instaloval.
+
+Sdílet mapu veřejnou adresou je přitom bezpečné už ze samé podstaty webu: aplikace je
+pouhé HTML, CSS a JavaScript běžící v kartě prohlížeče a ten nemá — a z principu ani
+nemůže mít — žádnou kontrolu nad počítačem návštěvníka; nečte cizí soubory, nespouští
+programy, nic potají neodesílá. Statický server typu GitHub Pages navíc žádný váš kód
+nevykonává, jen vydá hotové soubory. Sdílená mapa tak umí jedinou věc: ukázat se. Kdo si
+ji chce upravit, klikne na *Edit map* a dostane vlastní kopii ve svém prohlížeči,
+zatímco sdílený soubor zůstane nedotčený.
 
 ## Co z toho plyne
 
